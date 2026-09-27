@@ -1,52 +1,36 @@
 import os
-import json
-from flask import Flask, jsonify, send_from_directory, request
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 
-app = Flask(__name__, static_folder='.', template_folder='.')
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+app = Flask(__name__)
 
-def get_drive_service():
-    # 1. Check standard Render Secret File location
-    secret_path = "/etc/secrets/service_account.json"
-    
-    # 2. Check local project directory
-    local_path = os.path.join(BASE_DIR, "service_account.json")
-    
-    # 3. Check environment variable string
-    env_json = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+# Enable CORS for all routes (allows mobile apps / web frontends to connect)
+CORS(app)
 
-    creds = None
-    
-    if os.path.exists(secret_path):
-        creds = service_account.Credentials.from_service_account_file(
-            secret_path, scopes=["https://www.googleapis.com/auth/drive.readonly"]
-        )
-    elif os.path.exists(local_path):
-        creds = service_account.Credentials.from_service_account_file(
-            local_path, scopes=["https://www.googleapis.com/auth/drive.readonly"]
-        )
-    elif env_json:
-        info = json.loads(env_json)
-        creds = service_account.Credentials.from_service_account_info(
-            info, scopes=["https://www.googleapis.com/auth/drive.readonly"]
-        )
-    else:
-        raise FileNotFoundError(
-            "Service account key not found in /etc/secrets/, project root, or environment variables."
-        )
-
-    return build("drive", "v3", credentials=creds)
-
+# ---------------------------------------------------------
+# Root / Health Check Route
+# ---------------------------------------------------------
 @app.route('/')
-def index():
-    return send_from_directory(BASE_DIR, 'index.html')
+def home():
+    return jsonify({
+        "status": "success",
+        "message": "Khudem Al Quran API is running"
+    })
 
-@app.route('/<path:filename>')
-def serve_static(filename):
-    return send_from_directory(BASE_DIR, filename)
+# ---------------------------------------------------------
+# Example API Routes (Modify or add your own endpoints here)
+# ---------------------------------------------------------
+@app.route('/api/status', methods=['GET'])
+def get_status():
+    return jsonify({
+        "server": "online",
+        "version": "1.0.0"
+    })
 
+# ---------------------------------------------------------
+# Server Execution Configuration
+# ---------------------------------------------------------
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port)
+    # Render assigns dynamic ports via the PORT environment variable
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
