@@ -453,13 +453,28 @@ INDEX_HTML = """<!DOCTYPE html>
 
   .surah-arabic-name { 
     position: absolute; 
-    right: 12px; 
+    right: 48px; 
     top: 50%; 
     transform: translateY(-50%); 
     height: 24px; 
     max-width: 75px; 
     object-fit: contain; 
     pointer-events: none; 
+  }
+
+  /* Serial number shown at the far right, after the Arabic chapter name
+     (same look as the number column in the Surah drop-down list). */
+  .surah-arabic-num {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    min-width: 28px;
+    text-align: right;
+    font-size: 14px;
+    font-weight: 800;
+    color: #5a6324;
+    pointer-events: none;
   }
 
   .repeat-hint { 
@@ -630,6 +645,7 @@ INDEX_HTML = """<!DOCTYPE html>
     <div class="select-wrapper" onclick="toggleSurahDropdown()">
       <div id="surahSelectedDisplay" class="selected-display">-- Select Surah --</div>
       <img id="surahArabicName" class="surah-arabic-name" alt="" />
+      <span id="surahArabicNum" class="surah-arabic-num"></span>
     </div>
     <div id="surahCustomOptions" class="custom-select-options"></div>
   </div>
@@ -758,6 +774,8 @@ INDEX_HTML = """<!DOCTYPE html>
     const img = document.getElementById('surahArabicName');
     if (!img) return;
     const s = surahList.find(x => String(x.number) === String(surah));
+    const numEl = document.getElementById('surahArabicNum');
+    if (numEl) numEl.textContent = s ? s.number : '';
     if (s && s.image_url) {
       img.src = s.image_url;
       img.style.display = 'block';
