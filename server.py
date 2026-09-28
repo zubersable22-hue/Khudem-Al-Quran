@@ -522,7 +522,7 @@ INDEX_HTML = """<!DOCTYPE html>
     position: relative;
     display: block;
     width: 100%;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .fade-slot img {
@@ -542,6 +542,13 @@ INDEX_HTML = """<!DOCTYPE html>
   .fade-slot img:nth-child(1) { animation-delay: 0s; }
   .fade-slot img:nth-child(2) { animation-delay: 9s; }
   .fade-slot img:nth-child(3) { animation-delay: 18s; }
+
+  /* Language sizing: English text PNGs -21%, Arabic + Urdu text PNGs +15%.
+     Change these two numbers to fine-tune everything at once. */
+  :root { --en-scale: 0.79; --ar-ur-scale: 1.15; }
+  .fade-slot img:nth-child(1) { transform: translateX(-50%) scale(var(--en-scale)); }
+  .fade-slot img:nth-child(2),
+  .fade-slot img:nth-child(3) { transform: translateX(-50%) scale(var(--ar-ur-scale)); }
 
   @keyframes langFade {
     0% { opacity: 0; }
@@ -570,7 +577,7 @@ INDEX_HTML = """<!DOCTYPE html>
   .slot-footer-tagline { width: 100%; aspect-ratio: 300 / 34; margin: calc(10px + 6mm) 0 4px 0; }
   .slot-footer-tagline img:nth-child(2),
   .slot-footer-tagline img:nth-child(3) {
-    transform: translateX(-50%) scale(0.885);
+    transform: translateX(-50%) scale(calc(0.885 * var(--ar-ur-scale)));
   }
 
   /* "MEMORIZE WITH PERFECTION" banner — sits at the very top of the card,
