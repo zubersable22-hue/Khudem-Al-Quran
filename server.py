@@ -553,51 +553,35 @@ INDEX_HTML = """<!DOCTYPE html>
     src: local('Jameel Noori Nastaliq'), local('Jameel Noori Nastalique'), local('Jameel-Noori-Nastaliq');
   }
 
-  .footer-container {
-    margin-top: 20px;
-    text-align: center;
-    line-height: 1.6;
-  }
-
-  .footer-text {
-    font-size: 12px;
-    font-weight: 800;
-    color: #3f6e1f;
-    margin: 4px 0;
-    font-family: 'Britannic Bold', "Georgia", "Times New Roman", serif;
-  }
-
-  /* English stays in normal flow (defines the exact area);
-     Arabic and Urdu are overlaid on that same spot, same size. */
-  .swap {
-    position: relative;
-    display: inline-block;
-    white-space: nowrap;
-  }
-  .swap .t-en, .swap .t-ar, .swap .t-ur {
-    font-size: 12px;
-    line-height: 19.2px;
-  }
-  .swap .t-en {
-    font-family: 'Britannic Bold', "Georgia", "Times New Roman", serif;
-    animation: swapEn 9s ease-in-out infinite;
-  }
+  /* --- in-place translation (live text) --- */
+  .swap { position: relative; display: inline-block; white-space: nowrap; }
+  .swap .t-en { animation: swapEn 9s ease-in-out infinite; }
   .swap .t-ar, .swap .t-ur {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    text-align: center;
+    position: absolute; left: 0; right: 0; top: 50%;
+    transform: translateY(-50%);
+    text-align: center; opacity: 0;
+  }
+  .swap .t-ar { font-family: 'Mohammed Bold', 'Traditional Arabic', serif; animation: swapAr 9s ease-in-out infinite; }
+  .swap .t-ur { font-family: 'Jameel Noori Nastaliq', 'Jameel Noori Nastalique', 'Urdu Typesetting', serif; animation: swapUr 9s ease-in-out infinite; }
+
+  /* --- in-place translation over the baked-in banner texts ---
+     bg-clean = same background image with the 3 English texts removed,
+     same cover/center geometry, sits behind all controls. */
+  .app-container { isolation: isolate; }
+  .bg-swap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+  .bg-clean {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: url('/static/background_clean.jpg') no-repeat center center;
+    background-size: cover;
     opacity: 0;
+    animation: swapClean 9s ease-in-out infinite;
   }
-  .swap .t-ar {
-    font-family: 'Mohammed Bold', 'Traditional Arabic', serif;
-    animation: swapAr 9s ease-in-out infinite;
-  }
-  .swap .t-ur {
-    font-family: 'Jameel Noori Nastaliq', 'Jameel Noori Nastalique', 'Urdu Typesetting', serif;
-    animation: swapUr 9s ease-in-out infinite;
-  }
+  .bg-t { position: absolute; display: flex; align-items: center; justify-content: center; white-space: nowrap; line-height: 1; opacity: 0; font-weight: 900; }
+  .bg-t.ar { font-family: 'Mohammed Bold', 'Traditional Arabic', serif; animation: swapAr 9s ease-in-out infinite; }
+  .bg-t.ur { font-family: 'Jameel Noori Nastaliq', 'Jameel Noori Nastalique', 'Urdu Typesetting', serif; animation: swapUr 9s ease-in-out infinite; }
+  .bg-t.mwp { color: #ffffff; -webkit-text-stroke-color: #499608; paint-order: stroke fill; }
+  .bg-t.foot { color: #265109; }
+
   @keyframes swapEn {
     0%, 28%   { opacity: 1; }
     33%, 95%  { opacity: 0; }
@@ -613,11 +597,17 @@ INDEX_HTML = """<!DOCTYPE html>
     66%, 95%  { opacity: 1; }
     100%      { opacity: 0; }
   }
+  @keyframes swapClean {
+    0%, 28%   { opacity: 0; }
+    33%, 95%  { opacity: 1; }
+    100%      { opacity: 0; }
+  }
 </style>
 </head>
 <body>
 
 <div class="app-container">
+  <div class="bg-swap" id="bgSwap"><div class="bg-clean"></div></div>
   <div class="field">
     <label class="surah-label">Surah No. / Name :</label>
     <div class="select-wrapper" onclick="toggleSurahDropdown()">
@@ -646,7 +636,7 @@ INDEX_HTML = """<!DOCTYPE html>
   </div>
 
   <div class="repeat-hint">
-    PLEASE SET RECITATION REPEATS TO
+    <span class="swap"><span class="t-en">PLEASE SET RECITATION REPEATS TO</span><span class="t-ar">يرجى ضبط عدد مرات التلاوة على</span><span class="t-ur">براہِ کرم تلاوت کی تکرار مقرر کریں</span></span>
   </div>
 
   <div class="grid3">
@@ -678,25 +668,61 @@ INDEX_HTML = """<!DOCTYPE html>
 
   <div class="status" id="status">Playing 1 of 21: The Qari Abdul Basit Mujawwad</div>
   <div id="players"></div>
-
-  <div class="footer-container">
-    <div class="footer-text">
-      <span class="swap">
-        <span class="t-en">Learn . Live . Recite . Memorize</span>
-        <span class="t-ar">تعلّم • عِش • رتّل • احفظ</span>
-        <span class="t-ur">سیکھیں • عمل میں لائیں • تلاوت کریں • حفظ کریں</span>
-      </span>
-    </div>
-    <div class="footer-text">
-      <span class="swap">
-        <span class="t-en">Teach . Share . Please Pray</span>
-        <span class="t-ar">علّم • شارك • صلِّ من فضلك</span>
-        <span class="t-ur">سکھائیں • شیئر کریں • براہِ کرم دعا کریں</span>
-      </span>
-    </div>
-  </div>
 </div>
 
+<script>
+  /* Places Arabic/Urdu over the baked-in banner texts, using the exact
+     background-size:cover geometry of the container. */
+  (function () {
+    var IMG_W = 714, IMG_H = 1330;
+    var ITEMS = [
+      { cls: 'mwp',  x: 53,  y: 292,  w: 606, h: 44, ar: 'احفظ بإتقان', ur: 'کمال کے ساتھ حفظ کریں' },
+      { cls: 'foot', x: 141, y: 1163, w: 435, h: 19, ar: 'تعلّم • عِش • رتّل • احفظ', ur: 'سیکھیں • عمل میں لائیں • تلاوت کریں • حفظ کریں' },
+      { cls: 'foot', x: 169, y: 1197, w: 377, h: 19, ar: 'علّم • شارك • صلِّ من فضلك', ur: 'سکھائیں • شیئر کریں • براہِ کرم دعا کریں' }
+    ];
+    var layer = document.getElementById('bgSwap');
+    var box = layer.parentNode;
+    var els = [];
+    ITEMS.forEach(function (it) {
+      ['ar', 'ur'].forEach(function (lang) {
+        var d = document.createElement('div');
+        d.className = 'bg-t ' + lang + ' ' + it.cls;
+        d.textContent = it[lang];
+        layer.appendChild(d);
+        els.push({ el: d, it: it });
+      });
+    });
+    function place() {
+      var W = box.clientWidth, H = box.clientHeight;
+      var s = Math.max(W / IMG_W, H / IMG_H);
+      var ox = (W - IMG_W * s) / 2, oy = (H - IMG_H * s) / 2;
+      els.forEach(function (o) {
+        var it = o.it, e = o.el;
+        var bw = it.w * s, bh = it.h * s;
+        e.style.left = (ox + it.x * s) + 'px';
+        e.style.top = (oy + it.y * s) + 'px';
+        e.style.width = bw + 'px';
+        e.style.height = bh + 'px';
+        e.style.fontSize = '100px';
+        e.style.webkitTextStrokeWidth = '0px';
+        var probe = document.createElement('span');
+        probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font:inherit;';
+        probe.textContent = e.textContent;
+        e.appendChild(probe);
+        var tw = probe.getBoundingClientRect().width || 1;
+        e.removeChild(probe);
+        var fs = Math.min(100 * bw / tw, bh * (it.cls === 'mwp' ? 0.9 : 1.3));
+        e.style.fontSize = fs + 'px';
+        if (it.cls === 'mwp') e.style.webkitTextStrokeWidth = (fs * 0.09) + 'px';
+      });
+    }
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('load', place);
+    if (window.ResizeObserver) new ResizeObserver(place).observe(box);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(place);
+  })();
+</script>
 <script>
   let repeatCount = 21;
   let sequence = [];
