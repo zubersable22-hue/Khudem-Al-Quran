@@ -42,24 +42,32 @@ HTML_TEMPLATE = """
             width: 100%;
             height: auto;
             display: block;
-            margin: 0 auto 5px auto;
+            margin: 0 auto 12px auto;
         }
 
-        /* Generic CSS Multilingual Animation Container */
+        /* Generic CSS Multilingual Animation Container
+           Each slot's box shape is driven by aspect-ratio (matched to the
+           real PNG's own W:H proportions) instead of a guessed fixed
+           pixel height. That means the box always matches what the image
+           actually looks like, so it can never spill into the element
+           above or below it. If a specific PNG's true aspect ratio turns
+           out to differ from the value below, adjust that one line only —
+           nothing else needs to change. */
         .fade-slot {
             position: relative;
-            display: inline-block;
-            vertical-align: middle;
+            display: block;
+            width: 100%;
             overflow: hidden;
         }
 
         .fade-slot img {
             position: absolute;
-            top: 50%;
+            top: 0;
             left: 50%;
-            transform: translate(-50%, -50%);
+            transform: translateX(-50%);
+            width: auto;
+            height: 100%;
             max-width: 100%;
-            max-height: 100%;
             object-fit: contain;
             opacity: 0;
             animation: langFade 27s infinite;
@@ -78,12 +86,16 @@ HTML_TEMPLATE = """
             100% { opacity: 0; }
         }
 
-        /* Slot Dimensions matching baseline placement */
-        .slot-mwp { width: 100%; height: 32px; margin: 8px 0 10px 0; }
-        .slot-label { width: 100%; height: 18px; margin-bottom: 4px; }
-        .slot-repeat { width: 100%; height: 20px; margin: 12px 0 8px 0; }
-        .slot-times { width: 65px; height: 14px; margin-top: 2px; }
-        .slot-btn { width: 65px; height: 18px; }
+        /* Slot shapes: width:100% + aspect-ratio replaces the old fixed
+           px heights so each box's height always tracks its own width
+           responsively, on any screen size, instead of clipping/floating
+           free of its real image content. Tune the ratio per slot if a
+           given PNG set is proportioned differently than assumed here. */
+        .slot-mwp    { aspect-ratio: 380 / 55;  margin: 10px 0 14px 0; }
+        .slot-label  { aspect-ratio: 380 / 24;  margin-bottom: 6px; }
+        .slot-repeat { aspect-ratio: 380 / 30;  margin: 14px 0 10px 0; }
+        .slot-times  { width: 65px; aspect-ratio: 65 / 16; margin-top: 4px; }
+        .slot-btn    { width: 65px; aspect-ratio: 65 / 22; }
 
         /* Form Group Styling */
         .form-group {
