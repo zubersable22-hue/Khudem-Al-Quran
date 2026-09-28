@@ -282,40 +282,6 @@ INDEX_HTML = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>The Qari - Memorize With Perfection</title>
 <style>
-  @font-face {
-    font-family: 'Britannic Bold';
-    src: local('Britannic Bold'), local('Britannic-Bold');
-  }
-  @font-face {
-    font-family: 'Mohammed Bold';
-    src: local('Mohammed Bold'), local('Mohammed-Bold');
-  }
-  @font-face {
-    font-family: 'Jameel Noori Nastaliq';
-    src: local('Jameel Noori Nastaliq'), local('Jameel Noori Nastalique'), local('Jameel-Noori-Nastaliq');
-  }
-
-  @keyframes pulseText {
-    0% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.03); opacity: 0.85; }
-    100% { transform: scale(1); opacity: 1; }
-  }
-
-  .animated-text {
-    display: inline-block;
-    animation: pulseText 2s ease-in-out infinite;
-  }
-
-  .font-en {
-    font-family: 'Britannic Bold', "Georgia", "Times New Roman", serif;
-  }
-  .font-ar {
-    font-family: 'Mohammed Bold', 'Traditional Arabic', serif;
-  }
-  .font-ur {
-    font-family: 'Jameel Noori Nastaliq', 'Jameel Noori Nastalique', 'Urdu Typesetting', serif;
-  }
-
   * { 
     box-sizing: border-box; 
     margin: 0; 
@@ -327,7 +293,7 @@ INDEX_HTML = """<!DOCTYPE html>
     height: 100%;
     min-height: 100vh;
     background: #2b3a1a;
-    font-family: 'Britannic Bold', "Georgia", "Times New Roman", serif;
+    font-family: "Georgia", "Times New Roman", serif;
     margin: 0;
     padding: 0;
     overflow-x: hidden;
@@ -385,7 +351,6 @@ INDEX_HTML = """<!DOCTYPE html>
     margin-bottom: 3px; 
     letter-spacing: 0.2px;
     text-align: center;
-    font-family: 'Britannic Bold', "Georgia", "Times New Roman", serif;
   }
 
   .field label.surah-label {
@@ -414,7 +379,6 @@ INDEX_HTML = """<!DOCTYPE html>
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-family: 'Britannic Bold', "Georgia", "Times New Roman", serif;
   }
 
   .custom-select-options {
@@ -460,7 +424,6 @@ INDEX_HTML = """<!DOCTYPE html>
   .option-surah-name {
     flex: 1;
     text-align: left;
-    font-family: 'Britannic Bold', "Georgia", "Times New Roman", serif;
   }
 
   .option-arabic-img {
@@ -475,7 +438,6 @@ INDEX_HTML = """<!DOCTYPE html>
     text-align: right;
     font-weight: 800;
     color: #5a6324;
-    font-family: 'Britannic Bold', "Georgia", "Times New Roman", serif;
   }
 
   select { 
@@ -494,13 +456,11 @@ INDEX_HTML = """<!DOCTYPE html>
     text-align-last: left;
     padding-left: 8px;
     padding-right: 0;
-    font-family: 'Britannic Bold', "Georgia", "Times New Roman", serif;
   }
 
   select option {
     color: #5a6324;
     font-weight: bold;
-    font-family: 'Britannic Bold', "Georgia", "Times New Roman", serif;
   }
 
   .surah-arabic-name { 
@@ -523,7 +483,6 @@ INDEX_HTML = """<!DOCTYPE html>
     margin: 12px 0 6px 0; 
     text-transform: uppercase; 
     letter-spacing: 0.5px;
-    font-family: 'Britannic Bold', "Georgia", "Times New Roman", serif;
   }
 
   .grid3 { 
@@ -548,8 +507,8 @@ INDEX_HTML = """<!DOCTYPE html>
     transition: transform 0.1s ease;
   }
   button.btn-big:active { transform: scale(0.96); }
-  button.btn-big .big { font-size: 20px; font-weight: 900; color: #2c4416; line-height: 1; font-family: 'Britannic Bold', "Georgia", "Times New Roman", serif; }
-  button.btn-big .small { font-size: 9px; font-weight: 800; color: #2c4416; margin-top: 3px; letter-spacing: 0.5px; font-family: 'Britannic Bold', "Georgia", "Times New Roman", serif; }
+  button.btn-big .big { font-size: 20px; font-weight: 900; color: #2c4416; line-height: 1; }
+  button.btn-big .small { font-size: 9px; font-weight: 800; color: #2c4416; margin-top: 3px; letter-spacing: 0.5px; }
 
   button.btn-small { 
     background: #f0ede6 url('/static/smallbutton_2.png') no-repeat center center;
@@ -565,7 +524,7 @@ INDEX_HTML = """<!DOCTYPE html>
     transition: transform 0.1s ease;
   }
   button.btn-small:active { transform: scale(0.96); }
-  button.btn-small .title { font-size: 11px; font-weight: 900; color: #2b3a1a; letter-spacing: 0.5px; font-family: 'Britannic Bold', "Georgia", "Times New Roman", serif; }
+  button.btn-small .title { font-size: 11px; font-weight: 900; color: #2b3a1a; letter-spacing: 0.5px; }
 
   .nav-grid {
     margin-top: 8px;
@@ -579,7 +538,19 @@ INDEX_HTML = """<!DOCTYPE html>
     text-align: center; 
     min-height: 16px; 
     margin: 4px 0; 
-    font-family: 'Britannic Bold', "Georgia", "Times New Roman", serif;
+  }
+
+  @font-face {
+    font-family: 'Britannic Bold';
+    src: local('Britannic Bold'), local('Britannic-Bold');
+  }
+  @font-face {
+    font-family: 'Mohammed Bold';
+    src: local('Mohammed Bold'), local('Mohammed-Bold');
+  }
+  @font-face {
+    font-family: 'Jameel Noori Nastaliq';
+    src: local('Jameel Noori Nastaliq'), local('Jameel Noori Nastalique'), local('Jameel-Noori-Nastaliq');
   }
 
   .footer-container {
@@ -593,20 +564,54 @@ INDEX_HTML = """<!DOCTYPE html>
     font-weight: 800;
     color: #3f6e1f;
     margin: 4px 0;
-  }
-
-  .footer-text.en {
     font-family: 'Britannic Bold', "Georgia", "Times New Roman", serif;
   }
 
-  .footer-text.ar {
-    font-family: 'Mohammed Bold', 'Traditional Arabic', serif;
-    font-size: 13px;
+  /* English stays in normal flow (defines the exact area);
+     Arabic and Urdu are overlaid on that same spot, same size. */
+  .swap {
+    position: relative;
+    display: inline-block;
+    white-space: nowrap;
   }
-
-  .footer-text.ur {
+  .swap .t-en, .swap .t-ar, .swap .t-ur {
+    font-size: 12px;
+    line-height: 19.2px;
+  }
+  .swap .t-en {
+    font-family: 'Britannic Bold', "Georgia", "Times New Roman", serif;
+    animation: swapEn 9s ease-in-out infinite;
+  }
+  .swap .t-ar, .swap .t-ur {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    text-align: center;
+    opacity: 0;
+  }
+  .swap .t-ar {
+    font-family: 'Mohammed Bold', 'Traditional Arabic', serif;
+    animation: swapAr 9s ease-in-out infinite;
+  }
+  .swap .t-ur {
     font-family: 'Jameel Noori Nastaliq', 'Jameel Noori Nastalique', 'Urdu Typesetting', serif;
-    font-size: 13px;
+    animation: swapUr 9s ease-in-out infinite;
+  }
+  @keyframes swapEn {
+    0%, 28%   { opacity: 1; }
+    33%, 95%  { opacity: 0; }
+    100%      { opacity: 1; }
+  }
+  @keyframes swapAr {
+    0%, 28%   { opacity: 0; }
+    33%, 61%  { opacity: 1; }
+    66%, 100% { opacity: 0; }
+  }
+  @keyframes swapUr {
+    0%, 61%   { opacity: 0; }
+    66%, 95%  { opacity: 1; }
+    100%      { opacity: 0; }
   }
 </style>
 </head>
@@ -614,7 +619,7 @@ INDEX_HTML = """<!DOCTYPE html>
 
 <div class="app-container">
   <div class="field">
-    <label class="surah-label"><span class="animated-text font-en">Surah No. / Name :</span></label>
+    <label class="surah-label">Surah No. / Name :</label>
     <div class="select-wrapper" onclick="toggleSurahDropdown()">
       <div id="surahSelectedDisplay" class="selected-display">-- Select Surah --</div>
       <img id="surahArabicName" class="surah-arabic-name" alt="" />
@@ -623,7 +628,7 @@ INDEX_HTML = """<!DOCTYPE html>
   </div>
 
   <div class="field">
-    <label><span class="animated-text font-en">Juz No. / Name :</span></label>
+    <label>Juz No. / Name :</label>
     <div class="select-wrapper">
       <select id="juzSelect" onchange="onJuzChange()">
         <option value="">- Select The Juz -</option>
@@ -632,7 +637,7 @@ INDEX_HTML = """<!DOCTYPE html>
   </div>
 
   <div class="field">
-    <label><span class="animated-text font-en">Aayah / Verse No. :</span></label>
+    <label>Aayah / Verse No. :</label>
     <div class="select-wrapper">
       <select id="ayahSelect" onchange="onAyahChange()" disabled>
         <option value="">- Select The Ayah -</option>
@@ -641,33 +646,33 @@ INDEX_HTML = """<!DOCTYPE html>
   </div>
 
   <div class="repeat-hint">
-    <span class="animated-text font-en">PLEASE SET RECITATION REPEATS TO</span>
+    PLEASE SET RECITATION REPEATS TO
   </div>
 
   <div class="grid3">
     <button type="button" class="btn-big" id="rep21" onclick="setRepeat(21)">
       <div class="big">21</div>
-      <div class="small"><span class="animated-text font-en">TIMES</span></div>
+      <div class="small">TIMES</div>
     </button>
     <button type="button" class="btn-big" id="rep10" onclick="setRepeat(10)">
       <div class="big">10</div>
-      <div class="small"><span class="animated-text font-en">TIMES</span></div>
+      <div class="small">TIMES</div>
     </button>
     <button type="button" class="btn-big" id="rep5" onclick="setRepeat(5)">
       <div class="big">5</div>
-      <div class="small"><span class="animated-text font-en">TIMES</span></div>
+      <div class="small">TIMES</div>
     </button>
   </div>
 
   <div class="grid3 nav-grid">
     <button type="button" class="btn-small" onclick="prevQari()">
-      <div class="title"><span class="animated-text font-en">PREV.</span></div>
+      <div class="title">PREV.</div>
     </button>
     <button type="button" class="btn-small" onclick="againQari()">
-      <div class="title"><span class="animated-text font-en">AGAIN</span></div>
+      <div class="title">AGAIN</div>
     </button>
     <button type="button" class="btn-small" onclick="nextQari()">
-      <div class="title"><span class="animated-text font-en">NEXT</span></div>
+      <div class="title">NEXT</div>
     </button>
   </div>
 
@@ -675,27 +680,20 @@ INDEX_HTML = """<!DOCTYPE html>
   <div id="players"></div>
 
   <div class="footer-container">
-  <div class="footer-text en">
-    <span class="animated-text font-en">Learn . Live . Recite . Memorize</span>
-  </div>
-  <div class="footer-text en">
-    <span class="animated-text font-en">Teach . Share . Please Pray</span>
-  </div>
-  
-  <!-- ARABIC (Mohammed Bold) -->
-  <div class="footer-text ar">
-    <span class="animated-text font-ar">تعلّم • عِش • رتّل • احفظ</span>
-  </div>
-  <div class="footer-text ar">
-    <span class="animated-text font-ar">علّم • شارك • صلِّ من فضلك</span>
-  </div>
-  
-  <!-- URDU (Jameel Noori Nastaliq) -->
-  <div class="footer-text ur">
-    <span class="animated-text font-ur">سیکھیں • عمل میں لائیں • تلاوت کریں • حفظ کریں</span>
-  </div>
-  <div class="footer-text ur">
-    <span class="animated-text font-ur">سکھائیں • شیئر کریں • براہِ کرم دعا کریں</span>
+    <div class="footer-text">
+      <span class="swap">
+        <span class="t-en">Learn . Live . Recite . Memorize</span>
+        <span class="t-ar">تعلّم • عِش • رتّل • احفظ</span>
+        <span class="t-ur">سیکھیں • عمل میں لائیں • تلاوت کریں • حفظ کریں</span>
+      </span>
+    </div>
+    <div class="footer-text">
+      <span class="swap">
+        <span class="t-en">Teach . Share . Please Pray</span>
+        <span class="t-ar">علّم • شارك • صلِّ من فضلك</span>
+        <span class="t-ur">سکھائیں • شیئر کریں • براہِ کرم دعا کریں</span>
+      </span>
+    </div>
   </div>
 </div>
 
@@ -754,6 +752,7 @@ INDEX_HTML = """<!DOCTYPE html>
       item.innerHTML = `
         <span class="option-surah-name">${s.number}. ${s.name}</span>
         ${imgHtml}
+        <span class="option-surah-num">${s.number}</span>
       `;
       
       item.onclick = (e) => {
