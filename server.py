@@ -309,6 +309,22 @@ INDEX_HTML = """<!DOCTYPE html>
     }
   }
 
+  /* Phones: on Android Chrome, 100vh (body) is taller than 100dvh (card)
+     while the address bar is showing, and the card was centred inside the
+     body, so a dark-green strip showed above the background image. Fix: pin
+     the card to the very top, stretch its background image up by half of
+     that difference, and push the content down by the same amount so every
+     text/button stays exactly where it was. Anything left over below is
+     painted in the image's own bottom colour instead of dark green. */
+  @media (max-width: 600px) {
+    html, body { background-color: #abc38b; }
+    body { align-items: flex-start; }
+    .app-container {
+      padding-top: calc(52vw - 9mm + (100vh - 100dvh) / 2);
+      min-height: calc(100dvh + (100vh - 100dvh) / 2);
+    }
+  }
+
   .field { 
     margin-bottom: 8px; 
     position: relative;
