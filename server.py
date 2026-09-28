@@ -511,103 +511,13 @@ INDEX_HTML = """<!DOCTYPE html>
     min-height: 16px; 
     margin: 4px 0; 
   }
-
-  /* ================================================================
-     Multilingual PNG labels (English -> Urdu -> Arabic, fade cycle).
-     Every label is a fixed-size box, so the layout is identical to the
-     old text labels; only the PNGs fade in/out inside that box.
-     Sizes come from placement.png (fractions of the app width --cw).
-     ================================================================ */
-  .app-container { --cw: 500px; --pt: 220px; --px: 20px; }
-  @media (max-width: 600px) {
-    .app-container { --cw: 100vw; --pt: 52vw; --px: 16px; }
-  }
-
-  .ml-box { position: relative; display: block; }
-  .ml-box img.ml {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-    user-select: none;
-    -webkit-user-drag: none;
-    object-fit: contain;
-    animation: mlFade 9s ease-in-out infinite;
-  }
-  .ml-box img.ml:nth-child(2) { animation-delay: 3s; }
-  .ml-box img.ml:nth-child(3) { animation-delay: 6s; }
-  @keyframes mlFade {
-    0%       { opacity: 0; }
-    5%       { opacity: 1; }
-    33.333%  { opacity: 1; }
-    38.333%  { opacity: 0; }
-    100%     { opacity: 0; }
-  }
-
-  /* Memorize With Perfection - out of flow, so nothing moves */
-  .ml-mwp {
-    position: absolute;
-    left: calc(var(--cw) * 0.0838);
-    width: calc(var(--cw) * 0.832);
-    height: calc(var(--cw) * 0.0561);
-    top: calc(var(--pt) + 7.4px - var(--cw) * 0.1009 - var(--cw) * 0.02805);
-    pointer-events: none;
-  }
-  .ml-mwp img.ml { left: 0; top: 0; width: 100%; height: 100%; object-position: center center; }
-
-  /* Surah / Juz / Ayah labels - same 14.77px line the 13px text used */
-  .ml-label { height: 14.77px; }
-  .ml-label img.ml {
-    left: calc(var(--cw) * 0.1218 - var(--px));
-    top: 50%;
-    transform: translateY(-50%);
-    width: calc(var(--cw) * 0.32);
-    height: calc(var(--cw) * 0.0313);
-    object-position: left center;
-  }
-
-  /* PLEASE SET RECITATION REPEATS TO - same 14.4px line as before */
-  .ml-pls { height: 14.4px; }
-  .ml-pls img.ml {
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: calc(var(--cw) * 0.804);
-    height: calc(var(--cw) * 0.0337);
-  }
-
-  /* TIMES - same 10.2px line as the 9px text */
-  .ml-times { height: 10.2px; }
-  .ml-times img.ml {
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: calc(var(--cw) * 0.0944);
-    height: calc(var(--cw) * 0.0202);
-  }
-
-  /* PREV. / AGAIN / NEXT - button height is fixed, so this cannot shift */
-  .ml-nav {
-    width: calc(var(--cw) * 0.145);
-    height: calc(var(--cw) * 0.034);
-  }
-  .ml-nav img.ml { left: 0; top: 0; width: 100%; height: 100%; object-position: center center; }
 </style>
 </head>
 <body>
 
 <div class="app-container">
-  <div class="ml-box ml-mwp" aria-label="Memorize With Perfection">
-    <img class="ml" src="/static/mwp.png" alt="" draggable="false">
-    <img class="ml" src="/static/mwpu.png" alt="" draggable="false">
-    <img class="ml" src="/static/mwpua.png" alt="" draggable="false">
-  </div>
-
   <div class="field">
-    <label class="surah-label ml-box ml-label" aria-label="Surah No. / Name :">
-      <img class="ml" src="/static/sn.png" alt="" draggable="false">
-      <img class="ml" src="/static/snu.png" alt="" draggable="false">
-      <img class="ml" src="/static/sna.png" alt="" draggable="false">
-    </label>
+    <label class="surah-label">Surah No. / Name :</label>
     <div class="select-wrapper" onclick="toggleSurahDropdown()">
       <div id="surahSelectedDisplay" class="selected-display">-- Select Surah --</div>
       <img id="surahArabicName" class="surah-arabic-name" alt="" />
@@ -616,11 +526,7 @@ INDEX_HTML = """<!DOCTYPE html>
   </div>
 
   <div class="field">
-    <label class="ml-box ml-label" aria-label="Juz No. / Name :">
-      <img class="ml" src="/static/juzn.png" alt="" draggable="false">
-      <img class="ml" src="/static/juznu.png" alt="" draggable="false">
-      <img class="ml" src="/static/juzna.png" alt="" draggable="false">
-    </label>
+    <label>Juz No. / Name :</label>
     <div class="select-wrapper">
       <select id="juzSelect" onchange="onJuzChange()">
         <option value="">- Select The Juz -</option>
@@ -629,11 +535,7 @@ INDEX_HTML = """<!DOCTYPE html>
   </div>
 
   <div class="field">
-    <label class="ml-box ml-label" aria-label="Aayah / Verse No. :">
-      <img class="ml" src="/static/avn.png" alt="" draggable="false">
-      <img class="ml" src="/static/avnu.png" alt="" draggable="false">
-      <img class="ml" src="/static/avna.png" alt="" draggable="false">
-    </label>
+    <label>Aayah / Verse No. :</label>
     <div class="select-wrapper">
       <select id="ayahSelect" onchange="onAyahChange()" disabled>
         <option value="">- Select The Ayah -</option>
@@ -642,61 +544,33 @@ INDEX_HTML = """<!DOCTYPE html>
   </div>
 
   <div class="repeat-hint">
-    <div class="ml-box ml-pls" aria-label="Please set recitation repeats to">
-      <img class="ml" src="/static/PLSE.png" alt="" draggable="false">
-      <img class="ml" src="/static/PLSU.png" alt="" draggable="false">
-      <img class="ml" src="/static/PLSA.png" alt="" draggable="false">
-    </div>
+    PLEASE SET RECITATION REPEATS TO
   </div>
 
   <div class="grid3">
     <button type="button" class="btn-big" id="rep21" onclick="setRepeat(21)">
       <div class="big">21</div>
-      <div class="small ml-box ml-times" aria-label="Times">
-        <img class="ml" src="/static/rte.png" alt="" draggable="false">
-        <img class="ml" src="/static/rtu.png" alt="" draggable="false">
-        <img class="ml" src="/static/rta.png" alt="" draggable="false">
-      </div>
+      <div class="small">TIMES</div>
     </button>
     <button type="button" class="btn-big" id="rep10" onclick="setRepeat(10)">
       <div class="big">10</div>
-      <div class="small ml-box ml-times" aria-label="Times">
-        <img class="ml" src="/static/rte.png" alt="" draggable="false">
-        <img class="ml" src="/static/rtu.png" alt="" draggable="false">
-        <img class="ml" src="/static/rta.png" alt="" draggable="false">
-      </div>
+      <div class="small">TIMES</div>
     </button>
     <button type="button" class="btn-big" id="rep5" onclick="setRepeat(5)">
       <div class="big">5</div>
-      <div class="small ml-box ml-times" aria-label="Times">
-        <img class="ml" src="/static/rte.png" alt="" draggable="false">
-        <img class="ml" src="/static/rtu.png" alt="" draggable="false">
-        <img class="ml" src="/static/rta.png" alt="" draggable="false">
-      </div>
+      <div class="small">TIMES</div>
     </button>
   </div>
 
   <div class="grid3 nav-grid">
     <button type="button" class="btn-small" onclick="prevQari()">
-      <div class="title ml-box ml-nav" aria-label="Previous">
-        <img class="ml" src="/static/pve.png" alt="" draggable="false">
-        <img class="ml" src="/static/pvu.png" alt="" draggable="false">
-        <img class="ml" src="/static/pva.png" alt="" draggable="false">
-      </div>
+      <div class="title">PREV.</div>
     </button>
     <button type="button" class="btn-small" onclick="againQari()">
-      <div class="title ml-box ml-nav" aria-label="Again">
-        <img class="ml" src="/static/ae.png" alt="" draggable="false">
-        <img class="ml" src="/static/au.png" alt="" draggable="false">
-        <img class="ml" src="/static/aea.png" alt="" draggable="false">
-      </div>
+      <div class="title">AGAIN</div>
     </button>
     <button type="button" class="btn-small" onclick="nextQari()">
-      <div class="title ml-box ml-nav" aria-label="Next">
-        <img class="ml" src="/static/ne.png" alt="" draggable="false">
-        <img class="ml" src="/static/nu.png" alt="" draggable="false">
-        <img class="ml" src="/static/nea.png" alt="" draggable="false">
-      </div>
+      <div class="title">NEXT</div>
     </button>
   </div>
 
