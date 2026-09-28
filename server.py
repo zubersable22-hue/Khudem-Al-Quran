@@ -555,15 +555,36 @@ INDEX_HTML = """<!DOCTYPE html>
      occupy (.field label was ~13px text, .repeat-hint ~12px text, the
      button .small/.title text was 9-11px). Adjust the aspect-ratio on any
      one line if a given PNG set's real proportions differ. */
-  .slot-field-label  { width: 100%; aspect-ratio: 300 / 20; margin-bottom: 3px; }
+  .slot-field-label  { width: 65%; aspect-ratio: 300 / 20; margin: 0 auto 3px auto; }
   .slot-repeat-hint  { width: 100%; aspect-ratio: 300 / 26; margin: 12px 0 6px 0; }
   .slot-times        { width: 42px; aspect-ratio: 42 / 12; margin-top: 3px; }
   .slot-btn-title    { width: 60px; aspect-ratio: 60 / 15; }
+
+  /* Bottom "LEARN LIVE RECITE..." tagline — was static/missing before,
+     now animates EN -> AR -> UR like everything else. The Arabic and
+     Urdu artwork (LRMA.png / LRMu.png) render visually larger than the
+     English version (LRM-E.png) at the same box height, so they're
+     scaled down 25% (to 0.75) here specifically; English is untouched. */
+  .slot-footer-tagline { width: 100%; aspect-ratio: 300 / 34; margin: 10px 0 4px 0; }
+  .slot-footer-tagline img:nth-child(2),
+  .slot-footer-tagline img:nth-child(3) {
+    transform: translateX(-50%) scale(0.75);
+  }
+
+  /* "MEMORIZE WITH PERFECTION" banner — sits at the very top of the card,
+     above the Surah field. Same EN -> AR -> UR cycle as everything else. */
+  .slot-mwp { width: 100%; aspect-ratio: 300 / 28; margin: 0 0 10px 0; }
 </style>
 </head>
 <body>
 
 <div class="app-container">
+  <div class="fade-slot slot-mwp">
+    <img src="/static/mwp.png" alt="Memorize With Perfection (EN)">
+    <img src="/static/mwpua.png" alt="Memorize With Perfection (AR)">
+    <img src="/static/mwpu.png" alt="Memorize With Perfection (UR)">
+  </div>
+
   <div class="field">
     <div class="fade-slot slot-field-label">
       <img src="/static/sn.png" alt="Surah No. / Name (EN)">
@@ -662,6 +683,12 @@ INDEX_HTML = """<!DOCTYPE html>
 
   <div class="status" id="status">Playing 1 of 21: The Qari Abdul Basit Mujawwad</div>
   <div id="players"></div>
+
+  <div class="fade-slot slot-footer-tagline">
+    <img src="/static/LRM-E.png" alt="Learn Live Recite Memorize Teach Share Please Pray (EN)">
+    <img src="/static/LRMA.png" alt="Learn Live Recite Memorize Teach Share Please Pray (AR)">
+    <img src="/static/LRMu.png" alt="Learn Live Recite Memorize Teach Share Please Pray (UR)">
+  </div>
 </div>
 
 <script>
