@@ -89,7 +89,6 @@ def display_qari_name(folder_name):
     return f"The Qari {cleaned}"
 
 
-
 # ---------------------------------------------------------------------------
 # manifest.json is a pre-built index of { qari -> surah -> ayah -> drive_file_id }
 # produced by build_manifest.py (run locally, once, whenever the Drive library
@@ -311,7 +310,7 @@ INDEX_HTML = """<!DOCTYPE html>
     max-width: 500px;
     min-height: 100vh;
     min-height: 100dvh;
-    background: #ede6d6 url('/static/background_2.jpg') no-repeat center center;
+    background: #ede6d6 url('/static/background_clean.jpg') no-repeat center center;
     background-size: cover;
     padding: 220px 20px 60px 20px;
     display: flex; 
@@ -370,8 +369,15 @@ INDEX_HTML = """<!DOCTYPE html>
     cursor: pointer;
   }
 
-  .selected-display {
+  .selected-display-container {
     width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    overflow: hidden;
+  }
+
+  .selected-display {
     font-size: 14px;
     font-weight: bold;
     color: #5a6324;
@@ -379,6 +385,7 @@ INDEX_HTML = """<!DOCTYPE html>
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex: 1;
   }
 
   .custom-select-options {
@@ -464,14 +471,11 @@ INDEX_HTML = """<!DOCTYPE html>
   }
 
   .surah-arabic-name { 
-    position: absolute; 
-    right: 12px; 
-    top: 50%; 
-    transform: translateY(-50%); 
     height: 24px; 
-    max-width: 75px; 
+    max-width: 100px; 
     object-fit: contain; 
     pointer-events: none; 
+    margin-left: 8px;
   }
 
   .repeat-hint { 
@@ -564,18 +568,9 @@ INDEX_HTML = """<!DOCTYPE html>
   .swap .t-ar { font-family: 'Mohammed Bold', 'Traditional Arabic', serif; animation: swapAr 9s ease-in-out infinite; }
   .swap .t-ur { font-family: 'Jameel Noori Nastaliq', 'Jameel Noori Nastalique', 'Urdu Typesetting', serif; animation: swapUr 9s ease-in-out infinite; }
 
-  /* --- in-place translation over the baked-in banner texts ---
-     bg-clean = same background image with the 3 English texts removed,
-     same cover/center geometry, sits behind all controls. */
+  /* --- in-place translation overlay --- */
   .app-container { isolation: isolate; }
   .bg-swap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; pointer-events: none; overflow: hidden; }
-  .bg-clean {
-    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background: url('/static/background_clean.jpg') no-repeat center center;
-    background-size: cover;
-    opacity: 0;
-    animation: swapClean 9s ease-in-out infinite;
-  }
   .bg-t { position: absolute; display: flex; align-items: center; justify-content: center; white-space: nowrap; line-height: 1; opacity: 0; font-weight: 900; }
   .bg-t.ar { font-family: 'Mohammed Bold', 'Traditional Arabic', serif; animation: swapAr 9s ease-in-out infinite; }
   .bg-t.ur { font-family: 'Jameel Noori Nastaliq', 'Jameel Noori Nastalique', 'Urdu Typesetting', serif; animation: swapUr 9s ease-in-out infinite; }
@@ -597,22 +592,19 @@ INDEX_HTML = """<!DOCTYPE html>
     66%, 95%  { opacity: 1; }
     100%      { opacity: 0; }
   }
-  @keyframes swapClean {
-    0%, 28%   { opacity: 0; }
-    33%, 95%  { opacity: 1; }
-    100%      { opacity: 0; }
-  }
 </style>
 </head>
 <body>
 
 <div class="app-container">
-  <div class="bg-swap" id="bgSwap"><div class="bg-clean"></div></div>
+  <div class="bg-swap" id="bgSwap"></div>
   <div class="field">
     <label class="surah-label">Surah No. / Name :</label>
     <div class="select-wrapper" onclick="toggleSurahDropdown()">
-      <div id="surahSelectedDisplay" class="selected-display">-- Select Surah --</div>
-      <img id="surahArabicName" class="surah-arabic-name" alt="" />
+      <div class="selected-display-container">
+        <div id="surahSelectedDisplay" class="selected-display">-- Select Surah --</div>
+        <img id="surahArabicName" class="surah-arabic-name" alt="" style="display:none;" />
+      </div>
     </div>
     <div id="surahCustomOptions" class="custom-select-options"></div>
   </div>
@@ -671,8 +663,6 @@ INDEX_HTML = """<!DOCTYPE html>
 </div>
 
 <script>
-  /* Places Arabic/Urdu over the baked-in banner texts, using the exact
-     background-size:cover geometry of the container. */
   (function () {
     var IMG_W = 714, IMG_H = 1330;
     var ITEMS = [
