@@ -3,3 +3,5 @@ sdfsfs.py
 server-try.py
 server - Copy.py
 __pycache__/
+service_account.json
+*.json.key
