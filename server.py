@@ -1,25 +1,48 @@
 """
 The Holy Quran App - Qari Recitations (Hifz Made Easy)
-Reads audio directly out of per-Surah ZIPs.
+Reads audio from Google Drive (via a service account + a pre-built manifest.json
+index) instead of local ZIPs, so this can run on a hosted server that has no
+access to anyone's D: drive.
 Auto-plays Taawooz and Bismillah on first click anywhere in the app.
 """
 
 import os
 import re
+import io
 import json
-import zipfile
+import threading
 import mimetypes
+from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs, unquote
 
-# ---------------------------------------------------------------------------
-QURAN_ROOT = r"D:\Web & AI\The Holy Quran App\QuranDownload"
-CHAPTER_NAMES_ROOT = r"D:\Web & AI\The Holy Quran App\The Qurr's App\Chapter Names"
-STATIC_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
-PORT = 8787
-AUDIO_EXTS = {".mp3", ".m4a", ".wav", ".ogg", ".aac"}
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
 
-# File stems for standalone opening audio files located directly in QURAN_ROOT
+# ---------------------------------------------------------------------------
+# Static assets (PNGs, background/button images) are bundled INTO this repo,
+# so they're just relative folders next to this script.
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CHAPTER_NAMES_ROOT = os.path.join(BASE_DIR, "chapter_names")
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
+MANIFEST_PATH = os.path.join(BASE_DIR, "manifest.json")
+
+# The recitation audio itself lives on Google Drive. This is the JSON key file
+# for the service account we shared the Drive folder with (Viewer access).
+# On Render this is a "Secret File" mounted at /etc/secrets/<filename>.
+SERVICE_ACCOUNT_FILE = os.environ.get(
+    "GOOGLE_SERVICE_ACCOUNT_FILE", "/etc/secrets/service_account.json"
+)
+DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
+
+# Render assigns the port at runtime via $PORT; 8787 is only for local testing.
+PORT = int(os.environ.get("PORT", 8787))
+AUDIO_EXTS = {".mp3", ".m4a", ".wav", ".ogg", ".aac", ".opus"}
+mimetypes.add_type("audio/ogg", ".opus")
+
+# File stems for standalone opening audio files located directly in the Drive
+# QuranDownload root folder.
 TAAWOOZ_FILE_STEM = "009000"
 BISMILLAH_FILE_STEM = "001001"
 
@@ -66,54 +89,114 @@ def display_qari_name(folder_name):
     return f"The Qari {cleaned}"
 
 
+
+# ---------------------------------------------------------------------------
+# manifest.json is a pre-built index of { qari -> surah -> ayah -> drive_file_id }
+# produced by build_manifest.py (run locally, once, whenever the Drive library
+# changes). We load it once at startup instead of hitting the Drive API just to
+# list folders on every request.
+_MANIFEST = None
+_MANIFEST_LOCK = threading.Lock()
+
+
+def load_manifest():
+    global _MANIFEST
+    with _MANIFEST_LOCK:
+        if _MANIFEST is None:
+            if not os.path.isfile(MANIFEST_PATH):
+                raise FileNotFoundError(
+                    f"manifest.json not found at {MANIFEST_PATH}. "
+                    f"Run build_manifest.py first and commit the result."
+                )
+            with open(MANIFEST_PATH, "r", encoding="utf-8") as f:
+                _MANIFEST = json.load(f)
+        return _MANIFEST
+
+
 def list_qari_folders():
-    if not os.path.isdir(QURAN_ROOT):
-        return []
-    entries = []
-    for name in sorted(os.listdir(QURAN_ROOT)):
-        full = os.path.join(QURAN_ROOT, name)
-        if os.path.isdir(full):
-            entries.append(name)
-    return entries
+    manifest = load_manifest()
+    return sorted(manifest.get("qaris", {}).keys())
 
 
 def find_standalone_audio(stem):
-    if not os.path.isdir(QURAN_ROOT):
-        return None
-    for ext in AUDIO_EXTS:
-        candidate = os.path.join(QURAN_ROOT, stem + ext)
-        if os.path.isfile(candidate):
-            return candidate
+    """Returns a Drive file_id for a standalone opening clip, or None."""
+    manifest = load_manifest()
+    if stem == TAAWOOZ_FILE_STEM:
+        return manifest.get("taawooz_file_id")
+    if stem == BISMILLAH_FILE_STEM:
+        return manifest.get("bismillah_file_id")
     return None
 
 
-def zip_path_for(qari_folder_name, surah_number):
-    surah_str = f"{int(surah_number):03d}"
-    return os.path.join(QURAN_ROOT, qari_folder_name, f"{surah_str}.zip")
-
-
 def list_surah_files(qari_folder_name, surah_number):
-    zpath = zip_path_for(qari_folder_name, surah_number)
-    if not os.path.isfile(zpath):
-        return []
-    is_surah_9 = int(surah_number) == 9
-    entries = []
-    try:
-        with zipfile.ZipFile(zpath, "r") as zf:
-            for info in zf.infolist():
-                if info.is_dir():
-                    continue
-                base = os.path.basename(info.filename)
-                stem, ext = os.path.splitext(base)
-                if ext.lower() not in AUDIO_EXTS:
-                    continue
-                if is_surah_9 and stem.lower() == "009000":
-                    continue
-                entries.append(info.filename)
-    except zipfile.BadZipFile:
-        return []
-    entries.sort()
-    return [{"ayah": i, "entry": e} for i, e in enumerate(entries, start=1)]
+    """Returns [{"ayah": n}, ...] for every ayah available for this qari+surah,
+    sorted by ayah number, based on manifest.json (no network call)."""
+    manifest = load_manifest()
+    surah_map = manifest.get("qaris", {}).get(qari_folder_name, {}).get(str(int(surah_number)), {})
+    ayah_numbers = sorted(int(a) for a in surah_map.keys())
+    return [{"ayah": a} for a in ayah_numbers]
+
+
+def audio_file_id(qari_folder_name, surah_number, ayah_number):
+    """Looks up the Drive file_id for one specific qari+surah+ayah."""
+    manifest = load_manifest()
+    surah_map = manifest.get("qaris", {}).get(qari_folder_name, {}).get(str(int(surah_number)), {})
+    return surah_map.get(str(int(ayah_number)))
+
+
+# ---------------------------------------------------------------------------
+# Google Drive access: authenticate once, then download individual small
+# audio files on demand. Because every file here is tiny (tens of KB), we also
+# keep a small in-memory LRU cache so repeat plays of the same ayah (very
+# common — Al-Fatiha ayah 1 gets hit constantly) don't re-hit the Drive API.
+_drive_service = None
+_drive_service_lock = threading.Lock()
+
+
+def get_drive_service():
+    global _drive_service
+    if _drive_service is None:
+        with _drive_service_lock:
+            if _drive_service is None:
+                if not os.path.isfile(SERVICE_ACCOUNT_FILE):
+                    raise FileNotFoundError(
+                        f"Service account key not found at {SERVICE_ACCOUNT_FILE}. "
+                        f"Set GOOGLE_SERVICE_ACCOUNT_FILE or add the Render Secret File."
+                    )
+                creds = service_account.Credentials.from_service_account_file(
+                    SERVICE_ACCOUNT_FILE, scopes=DRIVE_SCOPES
+                )
+                _drive_service = build("drive", "v3", credentials=creds, cache_discovery=False)
+    return _drive_service
+
+
+_AUDIO_CACHE = OrderedDict()
+_AUDIO_CACHE_MAX_ITEMS = 500  # ~500 opus files x ~40KB avg ~= 20MB, safe for free tier RAM
+_audio_cache_lock = threading.Lock()
+
+
+def fetch_drive_file_bytes(file_id):
+    with _audio_cache_lock:
+        cached = _AUDIO_CACHE.get(file_id)
+        if cached is not None:
+            _AUDIO_CACHE.move_to_end(file_id)
+            return cached
+
+    service = get_drive_service()
+    request = service.files().get_media(fileId=file_id)
+    buf = io.BytesIO()
+    downloader = MediaIoBaseDownload(buf, request)
+    done = False
+    while not done:
+        _, done = downloader.next_chunk()
+    data = buf.getvalue()
+
+    with _audio_cache_lock:
+        _AUDIO_CACHE[file_id] = data
+        _AUDIO_CACHE.move_to_end(file_id)
+        while len(_AUDIO_CACHE) > _AUDIO_CACHE_MAX_ITEMS:
+            _AUDIO_CACHE.popitem(last=False)
+    return data
 
 
 def find_chapter_name_image(surah_number):
@@ -963,40 +1046,44 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/opening":
-            taawooz_path = find_standalone_audio(TAAWOOZ_FILE_STEM)
-            bismillah_path = find_standalone_audio(BISMILLAH_FILE_STEM)
+            taawooz_id = find_standalone_audio(TAAWOOZ_FILE_STEM)
+            bismillah_id = find_standalone_audio(BISMILLAH_FILE_STEM)
             self.send_json({
-                "available": bool(taawooz_path or bismillah_path),
-                "taawooz_url": "/taawooz-audio" if taawooz_path else None,
-                "bismillah_url": "/bismillah-audio" if bismillah_path else None,
+                "available": bool(taawooz_id or bismillah_id),
+                "taawooz_url": "/taawooz-audio" if taawooz_id else None,
+                "bismillah_url": "/bismillah-audio" if bismillah_id else None,
             })
             return
 
         if path == "/taawooz-audio":
-            audio_path = find_standalone_audio(TAAWOOZ_FILE_STEM)
-            if not audio_path:
+            file_id = find_standalone_audio(TAAWOOZ_FILE_STEM)
+            if not file_id:
                 self.send_error(404, "Taawooz file not found")
                 return
-            with open(audio_path, "rb") as f:
-                audio_data = f.read()
-            ctype, _ = mimetypes.guess_type(audio_path)
+            try:
+                audio_data = fetch_drive_file_bytes(file_id)
+            except Exception as e:
+                self.send_error(502, f"Error fetching audio from Drive: {e}")
+                return
             self.send_response(200)
-            self.send_header("Content-Type", ctype or "audio/mpeg")
+            self.send_header("Content-Type", "audio/mpeg")
             self.send_header("Content-Length", str(len(audio_data)))
             self.end_headers()
             self.wfile.write(audio_data)
             return
 
         if path == "/bismillah-audio":
-            audio_path = find_standalone_audio(BISMILLAH_FILE_STEM)
-            if not audio_path:
+            file_id = find_standalone_audio(BISMILLAH_FILE_STEM)
+            if not file_id:
                 self.send_error(404, "Bismillah file not found")
                 return
-            with open(audio_path, "rb") as f:
-                audio_data = f.read()
-            ctype, _ = mimetypes.guess_type(audio_path)
+            try:
+                audio_data = fetch_drive_file_bytes(file_id)
+            except Exception as e:
+                self.send_error(502, f"Error fetching audio from Drive: {e}")
+                return
             self.send_response(200)
-            self.send_header("Content-Type", ctype or "audio/mpeg")
+            self.send_header("Content-Type", "audio/mpeg")
             self.send_header("Content-Length", str(len(audio_data)))
             self.end_headers()
             self.wfile.write(audio_data)
@@ -1006,12 +1093,12 @@ class Handler(BaseHTTPRequestHandler):
             qs = parse_qs(parsed.query)
             surah = qs.get("surah", [""])[0]
             qaris = list_qari_folders()
-            max_cnt = 0
+            max_ayah = 0
             for q in qaris:
                 files = list_surah_files(q, surah)
-                if len(files) > max_cnt:
-                    max_cnt = len(files)
-            self.send_json({"max_ayah": max_cnt})
+                if files:
+                    max_ayah = max(max_ayah, files[-1]["ayah"])
+            self.send_json({"max_ayah": max_ayah})
             return
 
         if path == "/api/sequence":
@@ -1023,13 +1110,10 @@ class Handler(BaseHTTPRequestHandler):
             qaris = list_qari_folders()
             available = []
             for q in qaris:
-                files = list_surah_files(q, surah)
-                match = next((f for f in files if f["ayah"] == ayah), None)
-                if match:
+                if audio_file_id(q, surah, ayah):
                     available.append({
                         "qari": display_qari_name(q),
                         "qari_folder": q,
-                        "entry": match["entry"]
                     })
 
             seq = []
@@ -1038,7 +1122,7 @@ class Handler(BaseHTTPRequestHandler):
                     q_item = available[i % len(available)]
                     seq.append({
                         "qari": q_item["qari"],
-                        "url": f"/audio?qari={q_item['qari_folder']}&surah={surah}&entry={unquote(q_item['entry'])}"
+                        "url": f"/audio?qari={q_item['qari_folder']}&surah={surah}&ayah={ayah}"
                     })
 
             self.send_json({"sequence": seq})
@@ -1048,31 +1132,34 @@ class Handler(BaseHTTPRequestHandler):
             qs = parse_qs(parsed.query)
             qari = qs.get("qari", [""])[0]
             surah = qs.get("surah", [""])[0]
-            entry = qs.get("entry", [""])[0]
+            ayah = qs.get("ayah", [""])[0]
 
-            zpath = zip_path_for(qari, surah)
-            if not os.path.isfile(zpath):
-                self.send_error(404, "Zip file not found")
+            file_id = audio_file_id(qari, surah, ayah)
+            if not file_id:
+                self.send_error(404, "Audio file not found")
                 return
 
             try:
-                with zipfile.ZipFile(zpath, "r") as zf:
-                    data = zf.read(entry)
-                ctype, _ = mimetypes.guess_type(entry)
+                data = fetch_drive_file_bytes(file_id)
                 self.send_response(200)
-                self.send_header("Content-Type", ctype or "audio/mpeg")
+                self.send_header("Content-Type", "audio/ogg")
                 self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "public, max-age=86400")
                 self.end_headers()
                 self.wfile.write(data)
                 return
             except Exception as e:
-                self.send_error(500, f"Error reading audio zip: {e}")
+                self.send_error(502, f"Error fetching audio from Drive: {e}")
                 return
 
         self.send_error(404, "Not Found")
 
 
 def run():
+    # Load the manifest and confirm Drive credentials up front, so a config
+    # mistake fails loudly at startup instead of on someone's first tap.
+    load_manifest()
+    get_drive_service()
     server_address = ("0.0.0.0", PORT)
     httpd = ThreadingHTTPServer(server_address, Handler)
     print(f"Starting server on port {PORT}...")
