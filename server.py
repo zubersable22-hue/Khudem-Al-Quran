@@ -199,36 +199,44 @@ def fetch_drive_file_bytes(file_id):
     return data
 
 
+_CHAPTER_INDEX = None
+_CHAPTER_INDEX_LOCK = threading.Lock()
+
+
+def _build_chapter_index():
+    """Scan chapter_names (any subfolder, any letter-case) once and map
+    surah number -> PNG path. Files look like '1- Surah Al-Fatihah.png'."""
+    index = {}
+    root = CHAPTER_NAMES_ROOT
+    if not os.path.isdir(root):
+        # Linux is case-sensitive: try to find the folder ignoring case.
+        for name in os.listdir(BASE_DIR):
+            if name.lower().replace(" ", "_") == "chapter_names" and os.path.isdir(os.path.join(BASE_DIR, name)):
+                root = os.path.join(BASE_DIR, name)
+                break
+        else:
+            return index
+    num_re = re.compile(r"^\s*0*(\d{1,3})(?!\d)")
+    for dirpath, _dirs, files in os.walk(root):
+        for fn in sorted(files):
+            if not fn.lower().endswith(".png"):
+                continue
+            m = num_re.match(fn)
+            if m:
+                index.setdefault(int(m.group(1)), os.path.join(dirpath, fn))
+    return index
+
+
 def find_chapter_name_image(surah_number):
+    global _CHAPTER_INDEX
     try:
         n = int(surah_number)
     except (TypeError, ValueError):
         return None
-
-    if not os.path.isdir(CHAPTER_NAMES_ROOT):
-        return None
-
-    exact_names = [f"{n}.png", f"{n:02d}.png", f"{n:03d}.png"]
-    for name in exact_names:
-        candidate = os.path.join(CHAPTER_NAMES_ROOT, name)
-        if os.path.isfile(candidate):
-            return candidate
-
-    prefix_re = re.compile(rf"^0*{n}(?:\D|$)", re.IGNORECASE)
-    try:
-        for name in sorted(os.listdir(CHAPTER_NAMES_ROOT)):
-            if not name.lower().endswith(".png"):
-                continue
-            stem = os.path.splitext(name)[0]
-            if prefix_re.match(stem):
-                candidate = os.path.join(CHAPTER_NAMES_ROOT, name)
-                if os.path.isfile(candidate):
-                    return candidate
-    except OSError:
-        return None
-
-    return None
-
+    with _CHAPTER_INDEX_LOCK:
+        if _CHAPTER_INDEX is None:
+            _CHAPTER_INDEX = _build_chapter_index()
+        return _CHAPTER_INDEX.get(n)
 
 def safe_join(root, *parts):
     target = os.path.normpath(os.path.join(root, *parts))
@@ -726,7 +734,9 @@ INDEX_HTML = """<!DOCTYPE html>
     }
     ayahSel.disabled = true;
     ayahSel.innerHTML = '<option value="">Loading...</option>';
-    const maxAyah = await fetchMaxAyah(surah);
+    let maxAyah = 0;
+    try { maxAyah = await fetchMaxAyah(surah); }
+    catch (e) { document.getElementById('status').textContent = 'Could not load ayah list: ' + e; }
     currentSurah = parseInt(surah, 10);
     currentMaxAyah = maxAyah;
     ayahSel.innerHTML = '<option value="">- Select The Ayah -</option>';
@@ -888,6 +898,11 @@ INDEX_HTML = """<!DOCTYPE html>
     container.appendChild(card);
     const audioEl = document.getElementById('audioPlayer');
     audioEl.onended = () => { advanceInSequence(); };
+    audioEl.onerror = async () => {
+      let why = '';
+      try { const r = await fetch(item.url, {headers: {Range: 'bytes=0-1'}}); why = ' (server said ' + r.status + ')'; } catch (e) { why = ' (network error)'; }
+      document.getElementById('status').textContent = 'Audio failed to load' + why + ' - tap AGAIN';
+    };
     document.getElementById('status').textContent =
       `Playing ${currentIndex + 1} of ${sequence.length}: ${item.qari}`;
   }
@@ -978,6 +993,42 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def send_audio_bytes(self, data):
+        """Serve audio with HTTP Range support (needed by Chrome/Android)."""
+        total = len(data)
+        rng = self.headers.get("Range")
+        start, end, status = 0, total - 1, 200
+        if rng and rng.startswith("bytes="):
+            try:
+                a, _, b = rng[6:].split(",")[0].partition("-")
+                if a == "":
+                    start = max(0, total - int(b))
+                else:
+                    start = int(a)
+                    if b:
+                        end = min(int(b), total - 1)
+                if start > end or start >= total:
+                    self.send_response(416)
+                    self.send_header("Content-Range", f"bytes */{total}")
+                    self.end_headers()
+                    return
+                status = 206
+            except ValueError:
+                start, end, status = 0, total - 1, 200
+        chunk = data[start:end + 1]
+        self.send_response(status)
+        self.send_header("Content-Type", "audio/ogg")
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_header("Content-Length", str(len(chunk)))
+        if status == 206:
+            self.send_header("Content-Range", f"bytes {start}-{end}/{total}")
+        self.send_header("Cache-Control", "public, max-age=86400")
+        self.end_headers()
+        try:
+            self.wfile.write(chunk)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
     def do_GET(self):
         parsed = urlparse(self.path)
         path = unquote(parsed.path)
@@ -1011,6 +1062,38 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self.send_error(404, "Static file not found")
                 return
+
+        if path == "/api/debug":
+            manifest = load_manifest()
+            qaris = manifest.get("qaris", {})
+            probe = {}
+            for s in (1, 2, 112):
+                counts = [len(list_surah_files(q, s)) for q in qaris]
+                probe[str(s)] = {"qaris_with_audio": sum(1 for c in counts if c),
+                                 "max_ayah": max(counts) if counts else 0}
+            idx = _CHAPTER_INDEX if _CHAPTER_INDEX is not None else _build_chapter_index()
+            drive_test = {}
+            try:
+                _fid = manifest.get("bismillah_file_id") or next(iter(next(iter(next(iter(qaris.values())).values())).values()))
+                _d = fetch_drive_file_bytes(_fid)
+                drive_test = {"ok": True, "bytes": len(_d)}
+            except Exception as _e:
+                drive_test = {"ok": False, "error": str(_e)[:400]}
+            self.send_json({
+                "server_version": "diag-3",
+                "drive_download_test": drive_test,
+                "base_dir": BASE_DIR,
+                "chapter_names_dir_exists": os.path.isdir(CHAPTER_NAMES_ROOT),
+                "chapter_pngs_found": len(idx),
+                "chapter_numbers_missing": [i for i in range(1, 115) if i not in idx],
+                "static_dir_exists": os.path.isdir(STATIC_ROOT),
+                "manifest_qaris": len(qaris),
+                "manifest_surahs_present": len({s for q in qaris.values() for s in q}),
+                "audio_probe": probe,
+                "service_account_file": SERVICE_ACCOUNT_FILE,
+                "service_account_exists": os.path.isfile(SERVICE_ACCOUNT_FILE),
+            })
+            return
 
         if path == "/api/surahs":
             surahs = []
@@ -1065,11 +1148,7 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 self.send_error(502, f"Error fetching audio from Drive: {e}")
                 return
-            self.send_response(200)
-            self.send_header("Content-Type", "audio/mpeg")
-            self.send_header("Content-Length", str(len(audio_data)))
-            self.end_headers()
-            self.wfile.write(audio_data)
+            self.send_audio_bytes(audio_data)
             return
 
         if path == "/bismillah-audio":
@@ -1082,11 +1161,7 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 self.send_error(502, f"Error fetching audio from Drive: {e}")
                 return
-            self.send_response(200)
-            self.send_header("Content-Type", "audio/mpeg")
-            self.send_header("Content-Length", str(len(audio_data)))
-            self.end_headers()
-            self.wfile.write(audio_data)
+            self.send_audio_bytes(audio_data)
             return
 
         if path == "/api/ayah_count":
@@ -1141,16 +1216,13 @@ class Handler(BaseHTTPRequestHandler):
 
             try:
                 data = fetch_drive_file_bytes(file_id)
-                self.send_response(200)
-                self.send_header("Content-Type", "audio/ogg")
-                self.send_header("Content-Length", str(len(data)))
-                self.send_header("Cache-Control", "public, max-age=86400")
-                self.end_headers()
-                self.wfile.write(data)
-                return
             except Exception as e:
+                import traceback
+                traceback.print_exc()
                 self.send_error(502, f"Error fetching audio from Drive: {e}")
                 return
+            self.send_audio_bytes(data)
+            return
 
         self.send_error(404, "Not Found")
 
