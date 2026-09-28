@@ -145,6 +145,34 @@ def audio_file_id(qari_folder_name, surah_number, ayah_number):
 
 
 # ---------------------------------------------------------------------------
+# Ayatullah (Bismillah) handling.
+# In every Qari folder each surah has a "000" clip (002000, 003000, ...) that
+# is the Ayatullah/Bismillah, followed by the real ayahs (002001, 002002, ...).
+# Surah Al-Fatiha (1) and At-Tawbah (9) are the exceptions: no separate
+# Ayatullah, so their numbering is used as-is.
+# The page counts positions starting at 1 (position 1 = Ayatullah, shown as
+# label 0), so for every other surah we shift by one to reach the real file.
+NO_AYATULLAH_SURAHS = (1, 9)
+
+
+def ayah_offset(surah_number):
+    """0 for Al-Fatiha / At-Tawbah, 1 for every other surah."""
+    try:
+        return 0 if int(surah_number) in NO_AYATULLAH_SURAHS else 1
+    except (TypeError, ValueError):
+        return 1
+
+
+def real_ayah_number(surah_number, position):
+    """Converts the page's position (1 = Ayatullah) to the real file number
+    (0 = Ayatullah). Returns None if the position isn't a number."""
+    try:
+        return int(position) - ayah_offset(surah_number)
+    except (TypeError, ValueError):
+        return None
+
+
+# ---------------------------------------------------------------------------
 # Google Drive access: authenticate once, then download individual small
 # audio files on demand. Because every file here is tiny (tens of KB), we also
 # keep a small in-memory LRU cache so repeat plays of the same ayah (very
@@ -1172,7 +1200,7 @@ class Handler(BaseHTTPRequestHandler):
             for q in qaris:
                 files = list_surah_files(q, surah)
                 if files:
-                    max_ayah = max(max_ayah, files[-1]["ayah"])
+                    max_ayah = max(max_ayah, files[-1]["ayah"] + ayah_offset(surah))
             self.send_json({"max_ayah": max_ayah})
             return
 
@@ -1185,7 +1213,8 @@ class Handler(BaseHTTPRequestHandler):
             qaris = list_qari_folders()
             available = []
             for q in qaris:
-                if audio_file_id(q, surah, ayah):
+                real = real_ayah_number(surah, ayah)
+                if real is not None and real >= 0 and audio_file_id(q, surah, real):
                     available.append({
                         "qari": display_qari_name(q),
                         "qari_folder": q,
@@ -1209,7 +1238,8 @@ class Handler(BaseHTTPRequestHandler):
             surah = qs.get("surah", [""])[0]
             ayah = qs.get("ayah", [""])[0]
 
-            file_id = audio_file_id(qari, surah, ayah)
+            real = real_ayah_number(surah, ayah)
+            file_id = audio_file_id(qari, surah, real) if (real is not None and real >= 0) else None
             if not file_id:
                 self.send_error(404, "Audio file not found")
                 return
