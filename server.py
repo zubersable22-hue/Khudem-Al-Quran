@@ -285,7 +285,7 @@ INDEX_HTML = """<!DOCTYPE html>
     min-height: 100dvh;
     background: #ede6d6 url('/static/background_2.jpg') no-repeat center center;
     background-size: cover;
-    padding: calc(220px - 6mm) 20px 60px 20px;
+    padding: calc(220px - 9mm) 20px 60px 20px;
     display: flex; 
     flex-direction: column; 
     justify-content: flex-start; 
@@ -300,7 +300,7 @@ INDEX_HTML = """<!DOCTYPE html>
       max-width: 100vw !important;
       min-height: 100vh;
       min-height: 100dvh;
-      padding-top: calc(52vw - 6mm);
+      padding-top: calc(52vw - 9mm);
       padding-bottom: 10vw;
       padding-left: 16px;
       padding-right: 16px;
@@ -563,7 +563,7 @@ INDEX_HTML = """<!DOCTYPE html>
      button .small/.title text was 9-11px). Adjust the aspect-ratio on any
      one line if a given PNG set's real proportions differ. */
   .slot-field-label  { width: 65%; aspect-ratio: 300 / 20; margin: 0 auto 3px auto; }
-  .slot-repeat-hint  { width: 100%; aspect-ratio: 300 / 26; margin: 12px 0 6px 0; }
+  .slot-repeat-hint  { width: 100%; aspect-ratio: 300 / 26; margin: calc(12px - 3mm) 0 6px 0; }
   .slot-times        { width: 42px; aspect-ratio: 42 / 12; margin-top: 3px; }
   .slot-btn-title    { width: 60px; aspect-ratio: 60 / 15; }
 
@@ -572,9 +572,10 @@ INDEX_HTML = """<!DOCTYPE html>
      Urdu artwork (LRMA.png / LRMu.png) render visually larger than the
      English version (LRM-E.png) at the same box height, so they're
      scaled to 0.885 here (0.75 + 18%); English is untouched. The top
-     of the page was moved up 6mm, so this block's top margin gets +6mm to
-     keep the last two lines in exactly the same place as before. */
-  .slot-footer-tagline { width: 100%; aspect-ratio: 300 / 34; margin: calc(10px + 6mm) 0 4px 0; }
+     of the page was moved up 9mm and the repeat-hint another 3mm (12mm
+     total), so this block's top margin gets +12mm to keep the last two
+     lines in exactly the same place as before. */
+  .slot-footer-tagline { width: 100%; aspect-ratio: 300 / 34; margin: calc(10px + 12mm) 0 4px 0; }
   .slot-footer-tagline img:nth-child(2),
   .slot-footer-tagline img:nth-child(3) {
     transform: translateX(-50%) scale(calc(0.885 * var(--ar-ur-scale)));
