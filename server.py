@@ -583,6 +583,16 @@ INDEX_HTML = """<!DOCTYPE html>
   /* "MEMORIZE WITH PERFECTION" banner — sits at the very top of the card,
      above the Surah field. Same EN -> AR -> UR cycle as everything else. */
   .slot-mwp { width: 100%; aspect-ratio: 300 / 28; margin: 0 0 10px 0; }
+
+  /* Extra -21% on three specific Arabic/Urdu PNGs (on top of the shared
+     +15%): PLSA.png + PLSU.png (repeat hint, AR + UR) and mwpu.png (banner,
+     UR). 1.15 x 0.79 = ~0.91. */
+  :root { --shrink-21: 0.79; }
+  .slot-repeat-hint img:nth-child(2),
+  .slot-repeat-hint img:nth-child(3),
+  .slot-mwp img:nth-child(3) {
+    transform: translateX(-50%) scale(calc(var(--ar-ur-scale) * var(--shrink-21)));
+  }
 </style>
 </head>
 <body>
