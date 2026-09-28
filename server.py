@@ -285,7 +285,7 @@ INDEX_HTML = """<!DOCTYPE html>
     min-height: 100dvh;
     background: #ede6d6 url('/static/background_2.jpg') no-repeat center center;
     background-size: cover;
-    padding: 220px 20px 60px 20px;
+    padding: calc(220px - 6mm) 20px 60px 20px;
     display: flex; 
     flex-direction: column; 
     justify-content: flex-start; 
@@ -300,7 +300,7 @@ INDEX_HTML = """<!DOCTYPE html>
       max-width: 100vw !important;
       min-height: 100vh;
       min-height: 100dvh;
-      padding-top: 52vw;
+      padding-top: calc(52vw - 6mm);
       padding-bottom: 10vw;
       padding-left: 16px;
       padding-right: 16px;
@@ -564,11 +564,13 @@ INDEX_HTML = """<!DOCTYPE html>
      now animates EN -> AR -> UR like everything else. The Arabic and
      Urdu artwork (LRMA.png / LRMu.png) render visually larger than the
      English version (LRM-E.png) at the same box height, so they're
-     scaled down 25% (to 0.75) here specifically; English is untouched. */
-  .slot-footer-tagline { width: 100%; aspect-ratio: 300 / 34; margin: 10px 0 4px 0; }
+     scaled to 0.885 here (0.75 + 18%); English is untouched. The top
+     of the page was moved up 6mm, so this block's top margin gets +6mm to
+     keep the last two lines in exactly the same place as before. */
+  .slot-footer-tagline { width: 100%; aspect-ratio: 300 / 34; margin: calc(10px + 6mm) 0 4px 0; }
   .slot-footer-tagline img:nth-child(2),
   .slot-footer-tagline img:nth-child(3) {
-    transform: translateX(-50%) scale(0.75);
+    transform: translateX(-50%) scale(0.885);
   }
 
   /* "MEMORIZE WITH PERFECTION" banner — sits at the very top of the card,
