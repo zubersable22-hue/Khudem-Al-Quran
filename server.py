@@ -657,7 +657,7 @@ INDEX_HTML = """<!DOCTYPE html>
      of the page was moved up 9mm and the repeat-hint another 3mm (12mm
      total), so this block's top margin gets +12mm to keep the last two
      lines in exactly the same place as before. */
-  .slot-footer-tagline { width: 100%; aspect-ratio: 300 / 34; margin: calc(10px + 10mm) 0 4px 0; }
+  .slot-footer-tagline { width: 100%; aspect-ratio: 300 / 34; margin: calc(10px + 12mm) 0 4px 0; }
   .slot-footer-tagline img:nth-child(2),
   .slot-footer-tagline img:nth-child(3) {
     transform: translateX(-50%) scale(calc(0.885 * var(--ar-ur-scale)));
@@ -1212,8 +1212,9 @@ INDEX_HTML = """<!DOCTYPE html>
   const REF_W = 412;              // design width (px sizes were tuned at this width)
   const FOOT_W = 380;             // footer box width inside the design (412 - 2*16)
   const TOP_FRAC = 0.2474;        // banner top, as a fraction of image height
-  const FOOT_FRAC = 0.9067;       // centre of the tagline, same fraction (2mm above old spot)
-  const REF_AVAIL = 487.9;        // free height between banner top and tagline on the reference phone
+  const FOOT_FRAC = 0.9067;       // centre of the tagline, same fraction
+  const FOOT_DOWN = 2 * 3.7795;   // tagline pushed 2mm further down (1mm = 3.7795 CSS px)
+  const REF_AVAIL = 487.9 + 2 * 3.7795;  // free height between banner top and tagline on the reference phone (includes the 2mm tagline move, so the other rows stay put)
   let bgW = 714, bgH = 1330;      // background_2.jpg size (refined once loaded)
 
   function fitStage() {
@@ -1239,6 +1240,7 @@ INDEX_HTML = """<!DOCTYPE html>
     const Hi = bgH * sImg, offY = (H - Hi) / 2;
     let top = offY + TOP_FRAC * Hi;
     let footCenter = offY + FOOT_FRAC * Hi;
+    footCenter += FOOT_DOWN;
     if (H < W * 1.15) {                       // landscape / very wide: simple contain fallback
       top = 6; footCenter = H - 6 - footH / 2;
     }
