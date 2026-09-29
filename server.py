@@ -253,6 +253,7 @@ INDEX_HTML = """<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>The Qari - Memorize With Perfection</title>
+<script>document.documentElement.classList.add('fit-pending');</script>
 <style>
   * { 
     box-sizing: border-box; 
@@ -309,20 +310,50 @@ INDEX_HTML = """<!DOCTYPE html>
     }
   }
 
-  /* Phones: on Android Chrome, 100vh (body) is taller than 100dvh (card)
-     while the address bar is showing, and the card was centred inside the
-     body, so a dark-green strip showed above the background image. Fix: pin
-     the card to the very top, stretch its background image up by half of
-     that difference, and push the content down by the same amount so every
-     text/button stays exactly where it was. Anything left over below is
-     painted in the image's own bottom colour instead of dark green. */
+  /* Wrapper around everything except the footer tagline. On desktop it is
+     invisible (display: contents) so the layout there is untouched. */
+  #stageMain { display: contents; }
+
+  /* ===== Phones (<= 600px): locked, full-screen, seamless =====
+     - The page never scrolls or bounces; the card is pinned to the screen.
+     - The design is drawn once at a 412px reference width and scaled to fit
+       any phone, so proportions are identical everywhere.
+     - Content is anchored to the background artwork (header art at the top,
+       tagline box at the bottom), so text and artwork always line up.
+     The numbers used for anchoring live in fitStage() in the script below. */
   @media (max-width: 600px) {
-    html, body { background-color: #abc38b; }
-    body { align-items: flex-start; }
-    .app-container {
-      padding-top: calc(52vw - 9mm + (100vh - 100dvh) / 2);
-      min-height: calc(100dvh + (100vh - 100dvh) / 2);
+    html, body {
+      position: fixed; inset: 0;
+      width: 100%; height: 100%; min-height: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-text-size-adjust: 100%;
+      background-color: #abc38b;
     }
+    body { display: block; }
+    .app-container {
+      position: fixed; inset: 0;
+      width: 100% !important; max-width: none !important;
+      height: 100%; min-height: 0 !important;
+      margin: 0; padding: 0 !important;
+      display: block;
+      overflow: hidden;
+      box-shadow: none; border-radius: 0;
+    }
+    #stageMain {
+      display: flex; flex-direction: column; justify-content: space-between;
+      position: absolute; left: 0; top: 0;
+      width: 412px; padding: 0 16px;
+      transform-origin: 0 0;
+    }
+    .slot-footer-tagline {
+      position: absolute !important; left: 0; top: 0;
+      width: 380px !important; margin: 0 !important;
+      transform-origin: 0 0;
+    }
+    .fit-pending #stageMain, .fit-pending .slot-footer-tagline { opacity: 0; }
   }
 
   .field { 
@@ -566,13 +597,17 @@ INDEX_HTML = """<!DOCTYPE html>
     max-width: 100%;
     object-fit: contain;
     opacity: 0;
-    animation: langFade 27s infinite;
+    animation-duration: 48s;
+    animation-iteration-count: infinite;
   }
 
-  /* 27s total cycle: 9s per language (English -> Arabic -> Urdu) */
-  .fade-slot img:nth-child(1) { animation-delay: 0s; }
-  .fade-slot img:nth-child(2) { animation-delay: 9s; }
-  .fade-slot img:nth-child(3) { animation-delay: 18s; }
+  /* 48s cycle = English 9s + 21s pause (English stays on screen, 30s in
+     total), then Arabic 9s, then Urdu 9s, then it pauses on English again.
+     Each language has its own keyframes below (0.5s fades). To change the
+     pause, change the pause here AND the percentages in the 3 keyframes. */
+  .fade-slot img:nth-child(1) { animation-name: langFadeEn; }
+  .fade-slot img:nth-child(2) { animation-name: langFadeAr; }
+  .fade-slot img:nth-child(3) { animation-name: langFadeUr; }
 
   /* Language sizing: English text PNGs -21%, Arabic + Urdu text PNGs +15%.
      Change these two numbers to fine-tune everything at once. */
@@ -581,11 +616,27 @@ INDEX_HTML = """<!DOCTYPE html>
   .fade-slot img:nth-child(2),
   .fade-slot img:nth-child(3) { transform: translateX(-50%) scale(var(--ar-ur-scale)); }
 
-  @keyframes langFade {
+  /* English: visible 0s-30s (9s + 21s pause) */
+  @keyframes langFadeEn {
     0% { opacity: 0; }
-    1.85% { opacity: 1; }
-    31.48% { opacity: 1; }
-    33.33% { opacity: 0; }
+    1.04% { opacity: 1; }
+    61.46% { opacity: 1; }
+    62.5% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+  /* Arabic: visible 30s-39s */
+  @keyframes langFadeAr {
+    0%, 62.5% { opacity: 0; }
+    63.54% { opacity: 1; }
+    80.21% { opacity: 1; }
+    81.25% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+  /* Urdu: visible 39s-48s */
+  @keyframes langFadeUr {
+    0%, 81.25% { opacity: 0; }
+    82.29% { opacity: 1; }
+    98.96% { opacity: 1; }
     100% { opacity: 0; }
   }
 
@@ -606,7 +657,7 @@ INDEX_HTML = """<!DOCTYPE html>
      of the page was moved up 9mm and the repeat-hint another 3mm (12mm
      total), so this block's top margin gets +12mm to keep the last two
      lines in exactly the same place as before. */
-  .slot-footer-tagline { width: 100%; aspect-ratio: 300 / 34; margin: calc(10px + 12mm) 0 4px 0; }
+  .slot-footer-tagline { width: 100%; aspect-ratio: 300 / 34; margin: calc(10px + 10mm) 0 4px 0; }
   .slot-footer-tagline img:nth-child(2),
   .slot-footer-tagline img:nth-child(3) {
     transform: translateX(-50%) scale(calc(0.885 * var(--ar-ur-scale)));
@@ -630,6 +681,7 @@ INDEX_HTML = """<!DOCTYPE html>
 <body>
 
 <div class="app-container">
+<div id="stageMain">
   <div class="fade-slot slot-mwp">
     <img src="/static/mwp.png" alt="Memorize With Perfection (EN)">
     <img src="/static/mwpua.png" alt="Memorize With Perfection (AR)">
@@ -735,6 +787,7 @@ INDEX_HTML = """<!DOCTYPE html>
 
   <div class="status" id="status">Playing 1 of 21: The Qari Abdul Basit Mujawwad</div>
   <div id="players"></div>
+</div>
 
   <div class="fade-slot slot-footer-tagline">
     <img src="/static/LRM-E.png" alt="Learn Live Recite Memorize Teach Share Please Pray (EN)">
@@ -857,14 +910,15 @@ INDEX_HTML = """<!DOCTYPE html>
 
   function ayahStartFor(surah) { return 1; }
 
+  // The number shown is the audio serial number itself (001, 002, 003 ...),
+  // e.g. file 002001 is "Ayah 1", 114001 is "Ayah 1". Same rule for every
+  // surah, including Al-Fatihah and At-Tawbah (which already worked this way).
   function ayahDisplayLabel(surah, a) {
-    const s = parseInt(surah, 10);
-    return (s === 1 || s === 9) ? a : a - 1;
+    return a;
   }
 
   function ayahOptionText(surah, a) {
-    const label = ayahDisplayLabel(surah, a);
-    return label === 0 ? 'Ayatullah' : ('Ayah ' + label);
+    return 'Ayah ' + ayahDisplayLabel(surah, a);
   }
 
   async function fetchMaxAyah(surah) {
@@ -1142,6 +1196,89 @@ INDEX_HTML = """<!DOCTYPE html>
   loadSurahs();
   loadJuzOptions();
   loadOpening();
+
+  // ===== Phone layout engine: lock + fit + anchor to the background art =====
+  // Reference phone: 412 x 773 CSS px. Positions below were measured there and
+  // stored as fractions of the background image height so they follow the
+  // artwork on every screen size.
+  const REF_W = 412;              // design width (px sizes were tuned at this width)
+  const FOOT_W = 380;             // footer box width inside the design (412 - 2*16)
+  const TOP_FRAC = 0.2474;        // banner top, as a fraction of image height
+  const FOOT_FRAC = 0.9067;       // centre of the tagline, same fraction (2mm above old spot)
+  const REF_AVAIL = 487.9;        // free height between banner top and tagline on the reference phone
+  let bgW = 714, bgH = 1330;      // background_2.jpg size (refined once loaded)
+
+  function fitStage() {
+    const cont = document.querySelector('.app-container');
+    const main = document.getElementById('stageMain');
+    const foot = document.querySelector('.slot-footer-tagline');
+    if (!cont || !main || !foot) return;
+    const root = document.documentElement;
+    if (window.innerWidth > 600) {            // desktop: leave the normal flow layout alone
+      main.style.cssText = ''; foot.style.cssText = '';
+      root.classList.remove('fit-pending');
+      return;
+    }
+    const W = cont.clientWidth, H = cont.clientHeight;
+    if (!W || !H) return;
+
+    main.style.height = ''; main.style.transform = 'none'; foot.style.transform = 'none';
+    const natural = main.offsetHeight;        // content height at the 412px design width
+    const footH = foot.offsetHeight || (FOOT_W * 34 / 300);
+
+    // background is drawn with "cover", centred
+    const sImg = Math.max(W / bgW, H / bgH);
+    const Hi = bgH * sImg, offY = (H - Hi) / 2;
+    let top = offY + TOP_FRAC * Hi;
+    let footCenter = offY + FOOT_FRAC * Hi;
+    if (H < W * 1.15) {                       // landscape / very wide: simple contain fallback
+      top = 6; footCenter = H - 6 - footH / 2;
+    }
+
+    const gap = 6;
+    let s = W / REF_W;
+    const sMax = (footCenter - top - gap) / (natural + footH / 2);
+    s = Math.max(0.3, Math.min(s, sMax));
+
+    // taller phone than the reference -> spread the extra height between rows
+    const availDesign = (footCenter - footH * s / 2 - top) / s;
+    const extra = Math.max(0, Math.min(availDesign - REF_AVAIL, natural * 0.25));
+    if (extra > 0) main.style.height = (natural + extra) + 'px';
+
+    main.style.transform = 'translate(' + ((W - REF_W * s) / 2) + 'px,' + top + 'px) scale(' + s + ')';
+    foot.style.transform = 'translate(' + ((W - FOOT_W * s) / 2) + 'px,' + (footCenter - footH * s / 2) + 'px) scale(' + s + ')';
+    root.classList.remove('fit-pending');
+  }
+
+  let fitQueued = false;
+  function queueFit() {
+    if (fitQueued) return;
+    fitQueued = true;
+    requestAnimationFrame(() => { fitQueued = false; fitStage(); });
+  }
+  window.addEventListener('resize', queueFit);
+  window.addEventListener('orientationchange', () => setTimeout(queueFit, 150));
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', queueFit);
+  window.addEventListener('load', queueFit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(queueFit);
+  ['status', 'players'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) new MutationObserver(queueFit).observe(el, { childList: true, characterData: true, subtree: true });
+  });
+  (function () {
+    const im = new Image();
+    im.onload = () => { if (im.naturalWidth) { bgW = im.naturalWidth; bgH = im.naturalHeight; queueFit(); } };
+    im.src = '/static/background_2.jpg';
+  })();
+  fitStage();
+  setTimeout(() => document.documentElement.classList.remove('fit-pending'), 1500);
+
+  // Lock: no pinch/double-tap zoom or rubber-band scrolling on phones
+  // (the surah drop-down list stays scrollable).
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  document.addEventListener('touchmove', e => {
+    if (window.innerWidth <= 600 && !e.target.closest('.custom-select-options')) e.preventDefault();
+  }, { passive: false });
 </script>
 </body>
 </html>
