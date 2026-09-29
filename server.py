@@ -657,7 +657,7 @@ INDEX_HTML = """<!DOCTYPE html>
      of the page was moved up 9mm and the repeat-hint another 3mm (12mm
      total), so this block's top margin gets +12mm to keep the last two
      lines in exactly the same place as before. */
-  .slot-footer-tagline { width: 100%; aspect-ratio: 300 / 34; margin: calc(10px + 12mm) 0 4px 0; }
+  .slot-footer-tagline { width: 100%; aspect-ratio: 300 / 34; margin: calc(10px + 14mm) 0 4px 0; }
   .slot-footer-tagline img:nth-child(2),
   .slot-footer-tagline img:nth-child(3) {
     transform: translateX(-50%) scale(calc(0.885 * var(--ar-ur-scale)));
@@ -1213,7 +1213,8 @@ INDEX_HTML = """<!DOCTYPE html>
   const FOOT_W = 380;             // footer box width inside the design (412 - 2*16)
   const TOP_FRAC = 0.2474;        // banner top, as a fraction of image height
   const FOOT_FRAC = 0.9067;       // centre of the tagline, same fraction
-  const FOOT_DOWN = 2 * 3.7795;   // tagline pushed 2mm further down (1mm = 3.7795 CSS px)
+  const FOOT_DOWN = 2 * 3.7795;   // (layout maths for the rows above; do not change)
+  const FOOT_EXTRA = 2 * 3.7795;  // extra 2mm push-down for the tagline ONLY (1mm = 3.7795 CSS px)
   const REF_AVAIL = 487.9 + 2 * 3.7795;  // free height between banner top and tagline on the reference phone (includes the 2mm tagline move, so the other rows stay put)
   let bgW = 714, bgH = 1330;      // background_2.jpg size (refined once loaded)
 
@@ -1241,8 +1242,9 @@ INDEX_HTML = """<!DOCTYPE html>
     let top = offY + TOP_FRAC * Hi;
     let footCenter = offY + FOOT_FRAC * Hi;
     footCenter += FOOT_DOWN;
+    let footY = footCenter + FOOT_EXTRA;      // where the tagline is finally drawn
     if (H < W * 1.15) {                       // landscape / very wide: simple contain fallback
-      top = 6; footCenter = H - 6 - footH / 2;
+      top = 6; footCenter = H - 6 - footH / 2; footY = footCenter;
     }
 
     const gap = 6;
@@ -1256,7 +1258,7 @@ INDEX_HTML = """<!DOCTYPE html>
     if (extra > 0) main.style.height = (natural + extra) + 'px';
 
     main.style.transform = 'translate(' + ((W - REF_W * s) / 2) + 'px,' + top + 'px) scale(' + s + ')';
-    foot.style.transform = 'translate(' + ((W - FOOT_W * s) / 2) + 'px,' + (footCenter - footH * s / 2) + 'px) scale(' + s + ')';
+    foot.style.transform = 'translate(' + ((W - FOOT_W * s) / 2) + 'px,' + (footY - footH * s / 2) + 'px) scale(' + s + ')';
     root.classList.remove('fit-pending');
   }
 
