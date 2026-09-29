@@ -808,7 +808,7 @@ INDEX_HTML = """<!DOCTYPE html>
 
   function setRepeat(n) {
     repeatCount = n;
-    if (currentSurah && currentAyah) buildSequence(currentSurah, currentAyah);
+    if (currentSurah !== null && currentAyah !== null) buildSequence(currentSurah, currentAyah);
   }
 
   function toggleSurahDropdown() {
@@ -908,7 +908,12 @@ INDEX_HTML = """<!DOCTYPE html>
     playTrack(taawoozUrl).then(() => playTrack(bismillahUrl));
   }
 
-  function ayahStartFor(surah) { return 1; }
+  // Every surah except Al-Fatihah (1) and At-Tawbah (9) starts with the
+  // Bismillah clip: audio file 002000, 003000 ... 114000 (ayah number 0).
+  function ayahStartFor(surah) {
+    const s = parseInt(surah, 10);
+    return (s === 1 || s === 9) ? 1 : 0;
+  }
 
   // The number shown is the audio serial number itself (001, 002, 003 ...),
   // e.g. file 002001 is "Ayah 1", 114001 is "Ayah 1". Same rule for every
@@ -918,6 +923,7 @@ INDEX_HTML = """<!DOCTYPE html>
   }
 
   function ayahOptionText(surah, a) {
+    if (a === 0) return 'بسم الله الرحمن الرحيم';   // Bismillah (file X000)
     return 'Ayah ' + ayahDisplayLabel(surah, a);
   }
 
@@ -1018,6 +1024,7 @@ INDEX_HTML = """<!DOCTYPE html>
   ];
 
   function getJuzFor(surah, ayah) {
+    if (ayah < 1) ayah = 1;   // the Bismillah clip (ayah 0) belongs with ayah 1
     let result = JUZ_STARTS[0];
     for (const j of JUZ_STARTS) {
       if (surah > j.surah || (surah === j.surah && ayah >= j.ayah)) {
@@ -1064,7 +1071,8 @@ INDEX_HTML = """<!DOCTYPE html>
     currentMaxAyah = maxAyah;
 
     const minAyah = ayahStartFor(j.surah);
-    const targetAyah = j.ayah < minAyah ? minAyah : j.ayah;
+    // a Juz that opens at ayah 1 of a surah starts on that surah's Bismillah
+    const targetAyah = (j.ayah <= 1 || j.ayah < minAyah) ? minAyah : j.ayah;
 
     const ayahSel = document.getElementById('ayahSelect');
     ayahSel.innerHTML = '<option value="">- Select The Ayah -</option>';
