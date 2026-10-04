@@ -238,6 +238,46 @@ def find_chapter_name_image(surah_number):
             _CHAPTER_INDEX = _build_chapter_index()
         return _CHAPTER_INDEX.get(n)
 
+_JUZ_INDEX = None
+_JUZ_INDEX_LOCK = threading.Lock()
+
+
+def _build_juz_index():
+    """Juz name PNGs live in the SAME folder as the chapter names
+    (chapter_names, any subfolder, any letter-case). Files look like
+    'juz1.png' ... 'juz30.png'. Chapter files (which start with the surah
+    number) are never matched because only names starting with 'juz' count."""
+    index = {}
+    root = CHAPTER_NAMES_ROOT
+    if not os.path.isdir(root):
+        for name in os.listdir(BASE_DIR):
+            if name.lower().replace(" ", "_") == "chapter_names" and os.path.isdir(os.path.join(BASE_DIR, name)):
+                root = os.path.join(BASE_DIR, name)
+                break
+        else:
+            return index
+    juz_re = re.compile(r"^\s*juz\s*[_-]?\s*0*(\d{1,2})(?!\d)", re.IGNORECASE)
+    for dirpath, _dirs, files in os.walk(root):
+        for fn in sorted(files):
+            if not fn.lower().endswith(".png"):
+                continue
+            m = juz_re.match(fn)
+            if m and 1 <= int(m.group(1)) <= 30:
+                index.setdefault(int(m.group(1)), os.path.join(dirpath, fn))
+    return index
+
+
+def find_juz_name_image(juz_number):
+    global _JUZ_INDEX
+    try:
+        n = int(juz_number)
+    except (TypeError, ValueError):
+        return None
+    with _JUZ_INDEX_LOCK:
+        if _JUZ_INDEX is None:
+            _JUZ_INDEX = _build_juz_index()
+        return _JUZ_INDEX.get(n)
+
 def safe_join(root, *parts):
     target = os.path.normpath(os.path.join(root, *parts))
     root_norm = os.path.normpath(root)
@@ -493,6 +533,33 @@ INDEX_HTML = """<!DOCTYPE html>
     pointer-events: none; 
   }
 
+  /* Arabic Juz name: identical settings to .surah-arabic-name */
+  .juz-arabic-name {
+    position: absolute;
+    right: 48px;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 24px;
+    max-width: 75px;
+    object-fit: contain;
+    pointer-events: none;
+    display: none;
+  }
+
+  /* Juz serial number at the far right, same look as .surah-arabic-num */
+  .juz-arabic-num {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    min-width: 28px;
+    text-align: right;
+    font-size: 14px;
+    font-weight: 800;
+    color: #5a6324;
+    pointer-events: none;
+  }
+
   /* Serial number shown at the far right, after the Arabic chapter name
      (same look as the number column in the Surah drop-down list). */
   .surah-arabic-num {
@@ -712,6 +779,8 @@ INDEX_HTML = """<!DOCTYPE html>
       <select id="juzSelect" onchange="onJuzChange()">
         <option value="">- Select The Juz -</option>
       </select>
+      <img id="juzArabicName" class="juz-arabic-name" alt="" />
+      <span id="juzArabicNum" class="juz-arabic-num"></span>
     </div>
   </div>
 
@@ -837,6 +906,22 @@ INDEX_HTML = """<!DOCTYPE html>
     }
   }
 
+  function updateJuzArabicImage() {
+    const img = document.getElementById('juzArabicName');
+    const sel = document.getElementById('juzSelect');
+    if (!img || !sel) return;
+    const numEl = document.getElementById('juzArabicNum');
+    if (numEl) numEl.textContent = sel.value || '';
+    if (sel.value) {
+      img.onerror = () => { img.style.display = 'none'; };
+      img.onload = () => { img.style.display = 'block'; };
+      img.src = '/juz-name-image?juz=' + encodeURIComponent(sel.value);
+    } else {
+      img.style.display = 'none';
+      img.removeAttribute('src');
+    }
+  }
+
   async function loadSurahs() {
     const res = await fetch('/api/surahs');
     const data = await res.json();
@@ -957,6 +1042,7 @@ INDEX_HTML = """<!DOCTYPE html>
       ayahSel.innerHTML = '<option value="">- Select The Ayah -</option>';
       currentSurah = null; currentAyah = null; currentMaxAyah = 0;
       document.getElementById('juzSelect').value = '';
+      updateJuzArabicImage();
       return;
     }
     ayahSel.disabled = true;
@@ -974,6 +1060,7 @@ INDEX_HTML = """<!DOCTYPE html>
     }
     ayahSel.disabled = false;
     document.getElementById('juzSelect').value = '';
+    updateJuzArabicImage();
   }
 
   async function onAyahChange() {
@@ -982,6 +1069,7 @@ INDEX_HTML = """<!DOCTYPE html>
     if (!surah || !ayah) {
       document.getElementById('players').innerHTML = '';
       document.getElementById('juzSelect').value = '';
+      updateJuzArabicImage();
       return;
     }
     const surahNum = parseInt(surah, 10);
@@ -1050,11 +1138,13 @@ INDEX_HTML = """<!DOCTYPE html>
   function updateJuzDisplay(surah, ayah) {
     const j = getJuzFor(surah, ayah);
     document.getElementById('juzSelect').value = String(j.juz);
+    updateJuzArabicImage();
   }
 
   async function onJuzChange() {
     const juzSel = document.getElementById('juzSelect');
     const juzNum = parseInt(juzSel.value, 10);
+    updateJuzArabicImage();
     if (!juzNum) {
       document.getElementById('surahSelectedDisplay').textContent = '-- Select Surah --';
       document.getElementById('ayahSelect').value = '';
@@ -1435,6 +1525,27 @@ class Handler(BaseHTTPRequestHandler):
                     image_data = f.read()
             except OSError:
                 self.send_error(404, "Chapter PNG unreadable")
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "image/png")
+            self.send_header("Cache-Control", "public, max-age=3600")
+            self.send_header("Content-Length", str(len(image_data)))
+            self.end_headers()
+            self.wfile.write(image_data)
+            return
+
+        if path == "/juz-name-image":
+            qs = parse_qs(parsed.query)
+            juz = qs.get("juz", [""])[0]
+            image_path = find_juz_name_image(juz)
+            if not image_path:
+                self.send_error(404, "Juz PNG not found")
+                return
+            try:
+                with open(image_path, "rb") as f:
+                    image_data = f.read()
+            except OSError:
+                self.send_error(404, "Juz PNG unreadable")
                 return
             self.send_response(200)
             self.send_header("Content-Type", "image/png")
