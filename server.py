@@ -769,19 +769,21 @@ INDEX_HTML = """<!DOCTYPE html>
     <div id="surahCustomOptions" class="custom-select-options"></div>
   </div>
 
-  <div class="field">
+  <div class="field" id="juzField">
     <div class="fade-slot slot-field-label">
       <img src="/static/juzn.png" alt="Juz No. / Name (EN)">
       <img src="/static/juzna.png" alt="Juz No. / Name (AR)">
       <img src="/static/juznu.png" alt="Juz No. / Name (UR)">
     </div>
-    <div class="select-wrapper">
-      <select id="juzSelect" onchange="onJuzChange()">
+    <div class="select-wrapper" onclick="toggleJuzDropdown()">
+      <div id="juzSelectedDisplay" class="selected-display">- Select The Juz -</div>
+      <select id="juzSelect" onchange="onJuzChange()" style="display:none">
         <option value="">- Select The Juz -</option>
       </select>
       <img id="juzArabicName" class="juz-arabic-name" alt="" />
       <span id="juzArabicNum" class="juz-arabic-num"></span>
     </div>
+    <div id="juzCustomOptions" class="custom-select-options"></div>
   </div>
 
   <div class="field">
@@ -906,10 +908,27 @@ INDEX_HTML = """<!DOCTYPE html>
     }
   }
 
+  function toggleJuzDropdown() {
+    document.getElementById('surahCustomOptions').classList.remove('show');
+    document.getElementById('juzCustomOptions').classList.toggle('show');
+  }
+
+  document.addEventListener('click', function(e) {
+    const jf = document.getElementById('juzField');
+    if (jf && !jf.contains(e.target)) {
+      document.getElementById('juzCustomOptions').classList.remove('show');
+    }
+  });
+
   function updateJuzArabicImage() {
     const img = document.getElementById('juzArabicName');
     const sel = document.getElementById('juzSelect');
     if (!img || !sel) return;
+    const dispEl = document.getElementById('juzSelectedDisplay');
+    if (dispEl) {
+      const jj = JUZ_STARTS.find(x => String(x.juz) === String(sel.value));
+      dispEl.textContent = jj ? `Juz ${jj.juz} - ${jj.name}` : '- Select The Juz -';
+    }
     const numEl = document.getElementById('juzArabicNum');
     if (numEl) numEl.textContent = sel.value || '';
     if (sel.value) {
@@ -1132,6 +1151,25 @@ INDEX_HTML = """<!DOCTYPE html>
       opt.value = j.juz;
       opt.textContent = `Juz ${j.juz} - ${j.name}`;
       juzSel.appendChild(opt);
+    }
+
+    const juzBox = document.getElementById('juzCustomOptions');
+    juzBox.innerHTML = '';
+    for (const j of JUZ_STARTS) {
+      const item = document.createElement('div');
+      item.className = 'option-item';
+      item.innerHTML = `
+        <span class="option-surah-name">Juz ${j.juz} - ${j.name}</span>
+        <img class="option-arabic-img" src="/juz-name-image?juz=${j.juz}" alt="" onerror="this.style.display='none'" />
+        <span class="option-surah-num">${j.juz}</span>
+      `;
+      item.onclick = (e) => {
+        e.stopPropagation();
+        juzSel.value = String(j.juz);
+        juzBox.classList.remove('show');
+        onJuzChange();
+      };
+      juzBox.appendChild(item);
     }
   }
 
