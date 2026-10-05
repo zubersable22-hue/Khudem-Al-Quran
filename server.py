@@ -486,10 +486,12 @@ INDEX_HTML = """<!DOCTYPE html>
   }
 
   .option-arabic-img {
-    height: 26px;
-    max-width: 90px;
+    height: 24px;
+    max-width: 75px;
     object-fit: contain;
     margin: 0 10px;
+    transform: scale(1.875, 0.75);   /* same size as the selected-box image */
+    transform-origin: right center;
   }
 
   .option-juz-img {
@@ -540,7 +542,7 @@ INDEX_HTML = """<!DOCTYPE html>
     position: absolute; 
     right: 48px; 
     top: 50%; 
-    transform: translateY(-50%) scaleX(2.5);   /* width +150% */
+    transform: translateY(-50%) scale(1.875, 0.75);   /* width +150%, then overall -25% */
     transform-origin: right center; 
     height: 24px; 
     max-width: 75px; 
