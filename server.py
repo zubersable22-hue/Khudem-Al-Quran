@@ -489,8 +489,8 @@ INDEX_HTML = """<!DOCTYPE html>
     height: 24px;
     max-width: 75px;
     object-fit: contain;
-    margin: 0 10px;
-    transform: scale(1.875, 0.75);   /* same size as the selected-box image */
+    margin: 0 8px 0 10px;   /* 8px gap to the serial number */
+    transform: scale(1.3546875, 0.6375);   /* same size as the selected-box image */
     transform-origin: right center;
   }
 
@@ -502,7 +502,7 @@ INDEX_HTML = """<!DOCTYPE html>
   }
 
   .option-surah-num {
-    width: 30px;
+    width: auto;
     text-align: right;
     font-weight: 800;
     color: #5a6324;
@@ -542,7 +542,7 @@ INDEX_HTML = """<!DOCTYPE html>
     position: absolute; 
     right: 48px; 
     top: 50%; 
-    transform: translateY(-50%) scale(1.875, 0.75);   /* width +150%, then overall -25% */
+    transform: translateY(-50%) scale(1.3546875, 0.6375);   /* overall -15%, then width -15% */
     transform-origin: right center; 
     height: 24px; 
     max-width: 75px; 
@@ -972,7 +972,7 @@ INDEX_HTML = """<!DOCTYPE html>
       item.innerHTML = `
         <span class="option-surah-name">${s.number}. ${s.name}</span>
         ${imgHtml}
-        <span class="option-surah-num">${s.number}</span>
+        <span class="option-surah-num">.${s.number}</span>
       `;
       
       item.onclick = (e) => {
