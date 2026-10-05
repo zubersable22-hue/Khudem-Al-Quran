@@ -529,6 +529,13 @@ INDEX_HTML = """<!DOCTYPE html>
     font-weight: bold;
   }
 
+  /* Ayah box only: text centred */
+  #ayahSelect {
+    text-align: center;
+    text-align-last: center;
+    padding-left: 0;
+  }
+
   .surah-arabic-name { 
     position: absolute; 
     right: 48px; 
