@@ -553,8 +553,8 @@ INDEX_HTML = """<!DOCTYPE html>
     right: 14px;
     top: 50%;
     transform: translateY(-50%);
-    height: 32.4px;   /* 24px + 35% */
-    max-width: 93.75px;   /* 75px + 25% */
+    height: 40.5px;   /* 32.4px + 25% */
+    max-width: 117.19px;   /* 93.75px + 25% */
     object-fit: contain;
     pointer-events: none;
     display: none;
