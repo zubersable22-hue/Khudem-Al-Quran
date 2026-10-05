@@ -492,6 +492,13 @@ INDEX_HTML = """<!DOCTYPE html>
     margin: 0 10px;
   }
 
+  .option-juz-img {
+    height: 35.1px;   /* 26px + 35% */
+    max-width: 112.5px;   /* 90px + 25% */
+    object-fit: contain;
+    margin: 0 4px 0 10px;
+  }
+
   .option-surah-num {
     width: 30px;
     text-align: right;
@@ -536,11 +543,11 @@ INDEX_HTML = """<!DOCTYPE html>
   /* Arabic Juz name: identical settings to .surah-arabic-name */
   .juz-arabic-name {
     position: absolute;
-    right: 48px;
+    right: 14px;
     top: 50%;
     transform: translateY(-50%);
-    height: 24px;
-    max-width: 75px;
+    height: 32.4px;   /* 24px + 35% */
+    max-width: 93.75px;   /* 75px + 25% */
     object-fit: contain;
     pointer-events: none;
     display: none;
@@ -558,38 +565,6 @@ INDEX_HTML = """<!DOCTYPE html>
     font-weight: 800;
     color: #5a6324;
     pointer-events: none;
-  }
-
-  /* Arabic "Ayah no." label + number in the Ayah field (same style as the
-     Surah / Juz fields) */
-  .ayah-arabic-name {
-    position: absolute;
-    right: 48px;
-    top: 50%;
-    transform: translateY(-50%);
-    height: 24px;
-    max-width: 100px;
-    object-fit: contain;
-    pointer-events: none;
-    display: none;
-  }
-  .ayah-arabic-num {
-    position: absolute;
-    right: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    min-width: 28px;
-    text-align: right;
-    font-size: 14px;
-    font-weight: 800;
-    color: #5a6324;
-    pointer-events: none;
-  }
-  .option-ayah-img {
-    height: 26px;
-    max-width: 120px;
-    object-fit: contain;
-    margin: 0 10px;
   }
 
   /* Serial number shown at the far right, after the Arabic chapter name
@@ -813,26 +788,21 @@ INDEX_HTML = """<!DOCTYPE html>
         <option value="">- Select The Juz -</option>
       </select>
       <img id="juzArabicName" class="juz-arabic-name" alt="" />
-      <span id="juzArabicNum" class="juz-arabic-num"></span>
     </div>
     <div id="juzCustomOptions" class="custom-select-options"></div>
   </div>
 
-  <div class="field" id="ayahField">
+  <div class="field">
     <div class="fade-slot slot-field-label">
       <img src="/static/avn.png" alt="Aayah / Verse No. (EN)">
       <img src="/static/avna.png" alt="Aayah / Verse No. (AR)">
       <img src="/static/avnu.png" alt="Aayah / Verse No. (UR)">
     </div>
-    <div class="select-wrapper" onclick="toggleAyahDropdown()">
-      <div id="ayahSelectedDisplay" class="selected-display">- Select The Ayah -</div>
-      <select id="ayahSelect" onchange="onAyahChange()" disabled style="display:none">
+    <div class="select-wrapper">
+      <select id="ayahSelect" onchange="onAyahChange()" disabled>
         <option value="">- Select The Ayah -</option>
       </select>
-      <img id="ayahArabicName" class="ayah-arabic-name" src="/static/ayah_no.png" alt="" />
-      <span id="ayahArabicNum" class="ayah-arabic-num"></span>
     </div>
-    <div id="ayahCustomOptions" class="custom-select-options"></div>
   </div>
 
   <div class="fade-slot slot-repeat-hint">
@@ -965,8 +935,6 @@ INDEX_HTML = """<!DOCTYPE html>
       const jj = JUZ_STARTS.find(x => String(x.juz) === String(sel.value));
       dispEl.textContent = jj ? `Juz ${jj.juz} - ${jj.name}` : '- Select The Juz -';
     }
-    const numEl = document.getElementById('juzArabicNum');
-    if (numEl) numEl.textContent = sel.value || '';
     if (sel.value) {
       img.onerror = () => { img.style.display = 'none'; };
       img.onload = () => { img.style.display = 'block'; };
@@ -976,100 +944,6 @@ INDEX_HTML = """<!DOCTYPE html>
       img.removeAttribute('src');
     }
   }
-
-  // ---- Ayah drop-down: same look as the Surah / Juz lists ----------------
-  // The hidden <select id="ayahSelect"> stays the single source of truth (all
-  // the existing code keeps reading/writing it). The visible field and the
-  // list are redrawn from it whenever its options or value change.
-  const AYAH_BISMILLAH_TEXT = 'بسم الله الرحمن الرحيم';
-
-  function toggleAyahDropdown() {
-    const sel = document.getElementById('ayahSelect');
-    if (!sel || sel.disabled) return;
-    document.getElementById('surahCustomOptions').classList.remove('show');
-    document.getElementById('juzCustomOptions').classList.remove('show');
-    const box = document.getElementById('ayahCustomOptions');
-    box.classList.toggle('show');
-    if (box.classList.contains('show')) {
-      const cur = box.querySelector('.option-item.selected');
-      if (cur) box.scrollTop = cur.offsetTop - box.clientHeight / 2 + cur.offsetHeight / 2;
-    }
-  }
-
-  document.addEventListener('click', function(e) {
-    const af = document.getElementById('ayahField');
-    if (af && !af.contains(e.target)) {
-      document.getElementById('ayahCustomOptions').classList.remove('show');
-    }
-  });
-
-  function updateAyahDisplay() {
-    const sel = document.getElementById('ayahSelect');
-    const disp = document.getElementById('ayahSelectedDisplay');
-    const lbl = document.getElementById('ayahArabicName');
-    const num = document.getElementById('ayahArabicNum');
-    if (!sel || !disp) return;
-    const opt = sel.options[sel.selectedIndex];
-    const v = sel.value;
-    disp.textContent = opt ? opt.textContent : '- Select The Ayah -';
-    const isNum = v !== '' && parseInt(v, 10) > 0;
-    if (lbl) lbl.style.display = isNum ? 'block' : 'none';
-    if (num) num.textContent = isNum ? v : '';
-    document.querySelectorAll('#ayahCustomOptions .option-item').forEach(it => {
-      const on = it.dataset.ayah === v && v !== '';
-      it.classList.toggle('selected', on);
-      it.style.backgroundColor = on ? '#e2ebd8' : '';
-    });
-  }
-
-  function rebuildAyahList() {
-    const sel = document.getElementById('ayahSelect');
-    const box = document.getElementById('ayahCustomOptions');
-    if (!sel || !box) return;
-    box.innerHTML = '';
-    for (const o of Array.from(sel.options)) {
-      if (o.value === '') continue;
-      const n = parseInt(o.value, 10);
-      const item = document.createElement('div');
-      item.className = 'option-item';
-      item.dataset.ayah = o.value;
-      if (n > 0) {
-        item.innerHTML = `
-          <span class="option-surah-name">${o.textContent}</span>
-          <img class="option-ayah-img" src="/static/ayah_no.png" alt="" />
-          <span class="option-surah-num">${n}</span>
-        `;
-      } else {
-        item.innerHTML = `<span class="option-surah-name">${o.textContent}</span>`;
-      }
-      item.onclick = (e) => {
-        e.stopPropagation();
-        sel.value = o.value;
-        box.classList.remove('show');
-        onAyahChange();
-      };
-      box.appendChild(item);
-    }
-    updateAyahDisplay();
-  }
-
-  (function setupAyahDropdown() {
-    const sel = document.getElementById('ayahSelect');
-    if (!sel) return;
-    // programmatic "ayahSel.value = ..." must refresh the visible field too
-    const d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
-    Object.defineProperty(sel, 'value', {
-      configurable: true,
-      get() { return d.get.call(this); },
-      set(v) { d.set.call(this, v); updateAyahDisplay(); }
-    });
-    new MutationObserver(rebuildAyahList).observe(sel, { childList: true });
-    new MutationObserver(() => {
-      const w = sel.closest('.select-wrapper');
-      if (w) w.style.opacity = sel.disabled ? '0.7' : '';
-    }).observe(sel, { attributes: true, attributeFilter: ['disabled'] });
-    rebuildAyahList();
-  })();
 
   async function loadSurahs() {
     const res = await fetch('/api/surahs');
@@ -1290,8 +1164,7 @@ INDEX_HTML = """<!DOCTYPE html>
       item.className = 'option-item';
       item.innerHTML = `
         <span class="option-surah-name">Juz ${j.juz} - ${j.name}</span>
-        <img class="option-arabic-img" src="/juz-name-image?juz=${j.juz}" alt="" onerror="this.style.display='none'" />
-        <span class="option-surah-num">${j.juz}</span>
+        <img class="option-juz-img" src="/juz-name-image?juz=${j.juz}" alt="" onerror="this.style.display='none'" />
       `;
       item.onclick = (e) => {
         e.stopPropagation();
