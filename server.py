@@ -540,7 +540,8 @@ INDEX_HTML = """<!DOCTYPE html>
     position: absolute; 
     right: 48px; 
     top: 50%; 
-    transform: translateY(-50%); 
+    transform: translateY(-50%) scaleX(2.5);   /* width +150% */
+    transform-origin: right center; 
     height: 24px; 
     max-width: 75px; 
     object-fit: contain; 
@@ -581,7 +582,7 @@ INDEX_HTML = """<!DOCTYPE html>
     right: 14px;
     top: 50%;
     transform: translateY(-50%);
-    min-width: 28px;
+    min-width: 0;
     text-align: right;
     font-size: 14px;
     font-weight: 800;
@@ -912,7 +913,8 @@ INDEX_HTML = """<!DOCTYPE html>
     if (!img) return;
     const s = surahList.find(x => String(x.number) === String(surah));
     const numEl = document.getElementById('surahArabicNum');
-    if (numEl) numEl.textContent = s ? s.number : '';
+    if (numEl) numEl.textContent = s ? '.' + s.number : '';
+    if (numEl) img.style.right = (14 + numEl.offsetWidth + 8) + 'px';   // gap 26px -> 8px (-70%)
     if (s && s.image_url) {
       img.src = s.image_url;
       img.style.display = 'block';
