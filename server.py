@@ -36,6 +36,15 @@ SERVICE_ACCOUNT_FILE = os.environ.get(
 )
 DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
+# The Google Drive folder that holds ALL recitation audio. Audio is read from
+# exactly this folder (change it here, or via the DRIVE_FOLDER_URL env var).
+DRIVE_FOLDER_URL = os.environ.get(
+    "DRIVE_FOLDER_URL",
+    "https://drive.google.com/drive/u/1/folders/1NtX7fmLcDsalgCxKZ1jvOMxvDEAzabBn",
+)
+_m = re.search(r"/folders/([A-Za-z0-9_-]+)", DRIVE_FOLDER_URL)
+DRIVE_FOLDER_ID = _m.group(1) if _m else DRIVE_FOLDER_URL.strip()
+
 # Render assigns the port at runtime via $PORT; 8787 is only for local testing.
 PORT = int(os.environ.get("PORT", 8787))
 AUDIO_EXTS = {".mp3", ".m4a", ".wav", ".ogg", ".aac", ".opus"}
@@ -103,13 +112,23 @@ def load_manifest():
     global _MANIFEST
     with _MANIFEST_LOCK:
         if _MANIFEST is None:
-            if not os.path.isfile(MANIFEST_PATH):
-                raise FileNotFoundError(
-                    f"manifest.json not found at {MANIFEST_PATH}. "
-                    f"Run build_manifest.py first and commit the result."
-                )
-            with open(MANIFEST_PATH, "r", encoding="utf-8") as f:
-                _MANIFEST = json.load(f)
+            data = None
+            if os.path.isfile(MANIFEST_PATH):
+                with open(MANIFEST_PATH, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                root = data.get("root_folder_id")
+                if root and root != DRIVE_FOLDER_ID:
+                    print("[manifest] manifest.json was built for another folder; rebuilding.")
+                    data = None
+            if data is None:
+                print(f"[manifest] building index from Drive folder {DRIVE_FOLDER_ID} ...")
+                data = build_manifest_from_drive()
+                try:
+                    with open(MANIFEST_PATH, "w", encoding="utf-8") as f:
+                        json.dump(data, f)
+                except OSError as e:
+                    print("[manifest] could not save manifest.json:", e)
+            _MANIFEST = data
         return _MANIFEST
 
 
@@ -197,6 +216,72 @@ def fetch_drive_file_bytes(file_id):
         while len(_AUDIO_CACHE) > _AUDIO_CACHE_MAX_ITEMS:
             _AUDIO_CACHE.popitem(last=False)
     return data
+
+
+_AUDIO_NAME_RE = re.compile(r"^(\d{3})[_-]?(\d{3})$")
+
+
+def _drive_children(service, parent_id):
+    token = None
+    while True:
+        resp = service.files().list(
+            q=f"'{parent_id}' in parents and trashed = false",
+            fields="nextPageToken, files(id, name, mimeType)",
+            pageSize=1000, pageToken=token,
+            supportsAllDrives=True, includeItemsFromAllDrives=True,
+        ).execute()
+        for item in resp.get("files", []):
+            yield item
+        token = resp.get("nextPageToken")
+        if not token:
+            break
+
+
+def build_manifest_from_drive():
+    """Scans DRIVE_FOLDER_ID and returns the same structure manifest.json uses:
+    {qaris: {qari_folder: {surah: {ayah: file_id}}}, taawooz_file_id, bismillah_file_id}.
+    Audio files must be named SSSAAA (e.g. 002255.opus); any sub-folder depth is OK."""
+    service = get_drive_service()
+    FOLDER = "application/vnd.google-apps.folder"
+    manifest = {"root_folder_id": DRIVE_FOLDER_ID, "qaris": {},
+                "taawooz_file_id": None, "bismillah_file_id": None}
+
+    def parse(item):
+        stem, ext = os.path.splitext(item["name"])
+        if ext.lower() not in AUDIO_EXTS:
+            return None
+        return stem
+
+    for top in _drive_children(service, DRIVE_FOLDER_ID):
+        if top["mimeType"] != FOLDER:
+            stem = parse(top)
+            if stem == TAAWOOZ_FILE_STEM:
+                manifest["taawooz_file_id"] = top["id"]
+            elif stem == BISMILLAH_FILE_STEM:
+                manifest["bismillah_file_id"] = top["id"]
+            continue
+        qari = {}
+        stack = [top["id"]]
+        while stack:
+            for item in _drive_children(service, stack.pop()):
+                if item["mimeType"] == FOLDER:
+                    stack.append(item["id"])
+                    continue
+                stem = parse(item)
+                m = _AUDIO_NAME_RE.match(stem) if stem else None
+                if not m:
+                    continue
+                surah, ayah = int(m.group(1)), int(m.group(2))
+                if 1 <= surah <= 114:
+                    qari.setdefault(str(surah), {})[str(ayah)] = item["id"]
+        if qari:
+            manifest["qaris"][top["name"]] = qari
+            print(f"[manifest] {top['name']}: {len(qari)} surahs")
+    if not manifest["qaris"]:
+        raise RuntimeError(
+            "No audio found in the Drive folder. Make sure the folder is shared "
+            "with the service account email (Viewer) and files are named SSSAAA.*")
+    return manifest
 
 
 _CHAPTER_INDEX = None
@@ -486,14 +571,23 @@ INDEX_HTML = """<!DOCTYPE html>
   }
 
   .option-arabic-img {
-    height: 26px;
-    max-width: 90px;
+    height: 24px;
+    max-width: 75px;
     object-fit: contain;
-    margin: 0 10px;
+    margin: 0 8px 0 10px;   /* 8px gap to the serial number */
+    transform: scale(1.3546875, 0.6375);   /* same size as the selected-box image */
+    transform-origin: right center;
+  }
+
+  .option-juz-img {
+    height: 35.1px;   /* 26px + 35% */
+    max-width: 112.5px;   /* 90px + 25% */
+    object-fit: contain;
+    margin: 0 4px 0 10px;
   }
 
   .option-surah-num {
-    width: 30px;
+    width: auto;
     text-align: right;
     font-weight: 800;
     color: #5a6324;
@@ -522,11 +616,19 @@ INDEX_HTML = """<!DOCTYPE html>
     font-weight: bold;
   }
 
+  /* Ayah box only: text centred */
+  #ayahSelect {
+    text-align: center;
+    text-align-last: center;
+    padding-left: 0;
+  }
+
   .surah-arabic-name { 
     position: absolute; 
     right: 48px; 
     top: 50%; 
-    transform: translateY(-50%); 
+    transform: translateY(-50%) scale(1.3546875, 0.6375);   /* overall -15%, then width -15% */
+    transform-origin: right center; 
     height: 24px; 
     max-width: 75px; 
     object-fit: contain; 
@@ -536,11 +638,11 @@ INDEX_HTML = """<!DOCTYPE html>
   /* Arabic Juz name: identical settings to .surah-arabic-name */
   .juz-arabic-name {
     position: absolute;
-    right: 48px;
+    right: 14px;
     top: 50%;
     transform: translateY(-50%);
-    height: 24px;
-    max-width: 75px;
+    height: 40.5px;   /* 32.4px + 25% */
+    max-width: 117.19px;   /* 93.75px + 25% */
     object-fit: contain;
     pointer-events: none;
     display: none;
@@ -567,7 +669,7 @@ INDEX_HTML = """<!DOCTYPE html>
     right: 14px;
     top: 50%;
     transform: translateY(-50%);
-    min-width: 28px;
+    min-width: 0;
     text-align: right;
     font-size: 14px;
     font-weight: 800;
@@ -781,7 +883,6 @@ INDEX_HTML = """<!DOCTYPE html>
         <option value="">- Select The Juz -</option>
       </select>
       <img id="juzArabicName" class="juz-arabic-name" alt="" />
-      <span id="juzArabicNum" class="juz-arabic-num"></span>
     </div>
     <div id="juzCustomOptions" class="custom-select-options"></div>
   </div>
@@ -899,7 +1000,8 @@ INDEX_HTML = """<!DOCTYPE html>
     if (!img) return;
     const s = surahList.find(x => String(x.number) === String(surah));
     const numEl = document.getElementById('surahArabicNum');
-    if (numEl) numEl.textContent = s ? s.number : '';
+    if (numEl) numEl.textContent = s ? '.' + s.number : '';
+    if (numEl) img.style.right = (14 + numEl.offsetWidth + 8) + 'px';   // gap 26px -> 8px (-70%)
     if (s && s.image_url) {
       img.src = s.image_url;
       img.style.display = 'block';
@@ -929,8 +1031,6 @@ INDEX_HTML = """<!DOCTYPE html>
       const jj = JUZ_STARTS.find(x => String(x.juz) === String(sel.value));
       dispEl.textContent = jj ? `Juz ${jj.juz} - ${jj.name}` : '- Select The Juz -';
     }
-    const numEl = document.getElementById('juzArabicNum');
-    if (numEl) numEl.textContent = sel.value || '';
     if (sel.value) {
       img.onerror = () => { img.style.display = 'none'; };
       img.onload = () => { img.style.display = 'block'; };
@@ -957,7 +1057,7 @@ INDEX_HTML = """<!DOCTYPE html>
       item.innerHTML = `
         <span class="option-surah-name">${s.number}. ${s.name}</span>
         ${imgHtml}
-        <span class="option-surah-num">${s.number}</span>
+        <span class="option-surah-num">.${s.number}</span>
       `;
       
       item.onclick = (e) => {
@@ -1160,8 +1260,7 @@ INDEX_HTML = """<!DOCTYPE html>
       item.className = 'option-item';
       item.innerHTML = `
         <span class="option-surah-name">Juz ${j.juz} - ${j.name}</span>
-        <img class="option-arabic-img" src="/juz-name-image?juz=${j.juz}" alt="" onerror="this.style.display='none'" />
-        <span class="option-surah-num">${j.juz}</span>
+        <img class="option-juz-img" src="/juz-name-image?juz=${j.juz}" alt="" onerror="this.style.display='none'" />
       `;
       item.onclick = (e) => {
         e.stopPropagation();
@@ -1708,4 +1807,11 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    import sys
+    if "--build-manifest" in sys.argv:
+        data = build_manifest_from_drive()
+        with open(MANIFEST_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        print(f"Saved {MANIFEST_PATH} with {len(data['qaris'])} qaris.")
+    else:
+        run()
